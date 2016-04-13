@@ -7,6 +7,9 @@ import (
 	"net/url"
 	"sync/atomic"
 
+	"github.com/Sirupsen/logrus"
+
+	"golang.org/x/net/context"
 	"golang.org/x/net/websocket"
 )
 
@@ -17,23 +20,15 @@ const (
 
 // Slack is a connection to Slack.
 type Slack struct {
+	log            *logrus.Logger
 	token          string
 	ws             *websocket.Conn
 	id             string
 	messageCounter uint64
 }
 
-// Message is a message received from the Slack real time API.
-type Message struct {
-	ID      uint64 `json:"id"`
-	Type    string `json:"type"`
-	Channel string `json:"channel"`
-	Text    string `json:"text"`
-	User    string `json:"user"`
-}
-
 // New creates an instance of Slack given a Slack token.
-func New(token string) (*Slack, error) {
+func New(ctx context.Context, token string) (*Slack, error) {
 	wsurl, id, err := start(token)
 	if err != nil {
 		return nil, err
@@ -44,7 +39,10 @@ func New(token string) (*Slack, error) {
 		return nil, err
 	}
 
+	logger := ctx.Value("log").(*logrus.Logger)
+
 	return &Slack{
+		log:   logger,
 		token: token,
 		ws:    ws,
 		id:    id,
@@ -58,8 +56,16 @@ func (s *Slack) ID() string {
 
 // Receive blocks until it receives a message from the Slack API.
 func (s *Slack) Receive() (*Message, error) {
+	var in string
+	err := websocket.Message.Receive(s.ws, &in)
+	if err != nil {
+		return nil, err
+	}
+
+	s.log.WithField("content", in).Debug("incoming message")
+
 	var m Message
-	err := websocket.JSON.Receive(s.ws, &m)
+	err = json.Unmarshal([]byte(in), &m)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +74,9 @@ func (s *Slack) Receive() (*Message, error) {
 }
 
 // Send sends a message to the Slack API.
-func (s *Slack) Send(m Message) error {
-	m.ID = atomic.AddUint64(&s.messageCounter, 1)
-	return websocket.JSON.Send(s.ws, m)
+func (s *Slack) Send(om *OutgoingMessage) error {
+	om.ID = atomic.AddUint64(&s.messageCounter, 1)
+	return websocket.JSON.Send(s.ws, om)
 }
 
 // CallArgs are arguments to a Call request.
@@ -83,17 +89,6 @@ type CallResults map[string]interface{}
 func (s *Slack) Call(endpoint string, args CallArgs) (CallResults, error) {
 	args["token"] = s.token
 	return call(endpoint, args)
-}
-
-type responseSelf struct {
-	ID string `json:"id"`
-}
-
-type responseRtmStart struct {
-	Ok    bool         `json:"ok"`
-	Error string       `json:"error"`
-	URL   string       `json:"url"`
-	Self  responseSelf `json:"self"`
 }
 
 // start starts a slack connection with rtm.start, and returns a websock URL and user ID, or an error.

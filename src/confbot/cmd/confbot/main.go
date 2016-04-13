@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"golang.org/x/net/context"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/kouhin/envflag"
 
@@ -25,6 +27,7 @@ func main() {
 	envflag.Parse()
 
 	log := logrus.New()
+	log.Formatter = &logrus.JSONFormatter{}
 
 	if *slackToken == "" {
 		log.Fatalf("CONFBOT_SLACK_TOKEN environment variable is required")
@@ -56,7 +59,9 @@ func main() {
 
 	log.Hooks.Add(hook)
 
-	s, err := slack.New(*slackToken)
+	ctx := context.WithValue(context.Background(), "log", log)
+
+	s, err := slack.New(ctx, *slackToken)
 	if err != nil {
 		log.WithError(err).Fatal("unable to connect to slack")
 	}
@@ -67,9 +72,10 @@ func main() {
 		m, err := s.Receive()
 		if err != nil {
 			log.WithError(err).Error("error receiving message from slack")
+			continue
 		}
 
-		go func() {
+		go func(m *slack.Message) {
 			if m.Text == "hello world" {
 				ca := slack.CallArgs{
 					"user": m.User,
@@ -84,7 +90,7 @@ func main() {
 				profile := user["profile"].(map[string]interface{})
 				firstName := profile["first_name"].(string)
 
-				reply := slack.Message{
+				reply := &slack.OutgoingMessage{
 					Channel: m.Channel,
 					Type:    "message",
 					Text:    fmt.Sprintf("Hello %s", firstName),
@@ -95,6 +101,6 @@ func main() {
 					log.WithError(err).WithFields(logrus.Fields{}).Error("unable to send message")
 				}
 			}
-		}()
+		}(m)
 	}
 }
