@@ -23,6 +23,7 @@ func main() {
 		slackToken     = flag.String("confbot-slack-token", "", "slack token")
 		paperTrailHost = flag.String("confbot-papertrail-host", "", "papertrail host")
 		paperTrailPort = flag.Int("confbot-papertrail-port", 0, "papertrail port")
+		doToken        = flag.String("confbot-digitalocean-token", "", "digitalocean token")
 	)
 	envflag.Parse()
 
@@ -69,5 +70,7 @@ func main() {
 	log.Info("application started")
 
 	cb := confbot.New(ctx, s)
+
+	cb.AddTextAction("./boot shell", confbot.CreateBootShellAction(ctx, *doToken))
 	cb.Listen()
 }

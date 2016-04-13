@@ -25,9 +25,6 @@ func New(ctx context.Context, s *slack.Slack) *Confbot {
 		ctx: ctx,
 	}
 
-	cb.AddTextAction("boot shell", bootShellAction)
-	cb.AddTextAction("hello world", helloWorldAction)
-
 	return cb
 }
 
@@ -97,23 +94,6 @@ func helloWorldAction(ctx context.Context, m *slack.Message, s *slack.Slack) err
 		Channel: m.Channel,
 		Type:    "message",
 		Text:    fmt.Sprintf("Hello %s", firstName),
-	}
-
-	if err := s.Send(reply); err != nil {
-		log.WithError(err).WithFields(logrus.Fields{}).Error("unable to send message")
-		return err
-	}
-
-	return nil
-}
-
-func bootShellAction(ctx context.Context, m *slack.Message, s *slack.Slack) error {
-	log := logFromContext(ctx)
-
-	reply := &slack.OutgoingMessage{
-		Channel: m.Channel,
-		Type:    "message",
-		Text:    "booting shell",
 	}
 
 	if err := s.Send(reply); err != nil {

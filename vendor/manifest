@@ -8,10 +8,49 @@
 			"branch": "master"
 		},
 		{
+			"importpath": "github.com/digitalocean/godo",
+			"repository": "https://github.com/digitalocean/godo",
+			"revision": "859ab8f9253710399c0bc0f481a236f8285d5d4f",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/google/go-querystring/query",
+			"repository": "https://github.com/google/go-querystring",
+			"revision": "9235644dd9e52eeae6fa48efd539fdc351a0af53",
+			"branch": "master",
+			"path": "/query"
+		},
+		{
 			"importpath": "github.com/kouhin/envflag",
 			"repository": "https://github.com/kouhin/envflag",
 			"revision": "0e9a8606164937a324853295ffa8e9803372e765",
 			"branch": "master"
+		},
+		{
+			"importpath": "github.com/satori/go.uuid",
+			"repository": "https://github.com/satori/go.uuid",
+			"revision": "f9ab0dce87d815821e221626b772e3475a0d2749",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/tent/http-link-go",
+			"repository": "https://github.com/tent/http-link-go",
+			"revision": "ac974c61c2f990f4115b119354b5e0b47550e888",
+			"branch": "master"
+		},
+		{
+			"importpath": "golang.org/x/crypto/curve25519",
+			"repository": "https://go.googlesource.com/crypto",
+			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
+			"branch": "master",
+			"path": "/curve25519"
+		},
+		{
+			"importpath": "golang.org/x/crypto/ssh",
+			"repository": "https://go.googlesource.com/crypto",
+			"revision": "1777f3ba8c1fed80fcaec3317e3aaa4f627764d2",
+			"branch": "master",
+			"path": "/ssh"
 		},
 		{
 			"importpath": "golang.org/x/net/context",
@@ -26,6 +65,26 @@
 			"revision": "fb93926129b8ec0056f2f458b1f519654814edf0",
 			"branch": "master",
 			"path": "/websocket"
+		},
+		{
+			"importpath": "golang.org/x/oauth2",
+			"repository": "https://go.googlesource.com/oauth2",
+			"revision": "b0e2337fe6ec0c637fa4f123268b972f334504eb",
+			"branch": "master"
+		},
+		{
+			"importpath": "google.golang.org/cloud/compute/metadata",
+			"repository": "https://code.googlesource.com/gocloud",
+			"revision": "79ffda073da804f325135da5ff645a630a4d7625",
+			"branch": "master",
+			"path": "/compute/metadata"
+		},
+		{
+			"importpath": "google.golang.org/cloud/internal",
+			"repository": "https://code.googlesource.com/gocloud",
+			"revision": "79ffda073da804f325135da5ff645a630a4d7625",
+			"branch": "master",
+			"path": "/internal"
 		}
 	]
 }

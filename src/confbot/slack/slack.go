@@ -76,7 +76,24 @@ func (s *Slack) Receive() (*Message, error) {
 // Send sends a message to the Slack API.
 func (s *Slack) Send(om *OutgoingMessage) error {
 	om.ID = atomic.AddUint64(&s.messageCounter, 1)
-	return websocket.JSON.Send(s.ws, om)
+	if err := websocket.JSON.Send(s.ws, om); err != nil {
+		s.log.WithError(err).WithFields(logrus.Fields{}).Error("unable to send message")
+
+		return err
+	}
+
+	return nil
+}
+
+// SendToChannel sends a text message to a channel.
+func (s *Slack) SendToChannel(msg, channel string) error {
+	om := &OutgoingMessage{
+		Channel: channel,
+		Type:    "message",
+		Text:    msg,
+	}
+
+	return s.Send(om)
 }
 
 // CallArgs are arguments to a Call request.
