@@ -1,8 +1,8 @@
 package main
 
 import (
+	"confbot"
 	"flag"
-	"fmt"
 	"os"
 
 	"golang.org/x/net/context"
@@ -68,39 +68,6 @@ func main() {
 
 	log.Info("application started")
 
-	for {
-		m, err := s.Receive()
-		if err != nil {
-			log.WithError(err).Error("error receiving message from slack")
-			continue
-		}
-
-		go func(m *slack.Message) {
-			if m.Text == "hello world" {
-				ca := slack.CallArgs{
-					"user": m.User,
-				}
-				cr, err := s.Call("users.info", ca)
-				if err != nil {
-					log.WithError(err).
-						Error("unable to lookup user")
-				}
-
-				user := cr["user"].(map[string]interface{})
-				profile := user["profile"].(map[string]interface{})
-				firstName := profile["first_name"].(string)
-
-				reply := &slack.OutgoingMessage{
-					Channel: m.Channel,
-					Type:    "message",
-					Text:    fmt.Sprintf("Hello %s", firstName),
-				}
-
-				err = s.Send(reply)
-				if err != nil {
-					log.WithError(err).WithFields(logrus.Fields{}).Error("unable to send message")
-				}
-			}
-		}(m)
-	}
+	cb := confbot.New(ctx, s)
+	cb.Listen()
 }
