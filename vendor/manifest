@@ -19,12 +19,6 @@
 			"revision": "fb93926129b8ec0056f2f458b1f519654814edf0",
 			"branch": "master",
 			"path": "/websocket"
-		},
-		{
-			"importpath": "gopkg.in/polds/logrus-papertrail-hook.v2",
-			"repository": "https://gopkg.in/polds/logrus-papertrail-hook.v2",
-			"revision": "dfa4a9f9a7b1d4cced6f29b140a767162a2dceaa",
-			"branch": "master"
 		}
 	]
 }

@@ -1,8 +1,8 @@
-package logrus_papertrail
+package logging
 
 import (
+	"crypto/tls"
 	"fmt"
-	"net"
 	"os"
 	"time"
 
@@ -13,7 +13,7 @@ const (
 	format = "Jan 2 15:04:05"
 )
 
-// PapertrailHook to send logs to a logging service compatible with the Papertrail API.
+// Hook to send logs to a logging service compatible with the Papertrail API.
 type Hook struct {
 	// Connection Details
 	Host string
@@ -23,14 +23,14 @@ type Hook struct {
 	Appname  string
 	Hostname string
 
-	udpConn net.Conn
+	tlsConn *tls.Conn
 }
 
 // NewPapertrailHook creates a hook to be added to an instance of logger.
 func NewPapertrailHook(hook *Hook) (*Hook, error) {
 	var err error
 
-	hook.udpConn, err = net.Dial("udp", fmt.Sprintf("%s:%d", hook.Host, hook.Port))
+	hook.tlsConn, err = tls.Dial("tcp", fmt.Sprintf("%s:%d", hook.Host, hook.Port), nil)
 	return hook, err
 }
 
@@ -40,9 +40,11 @@ func (hook *Hook) Fire(entry *logrus.Entry) error {
 	msg, _ := entry.String()
 	payload := fmt.Sprintf("<22> %s %s %s: %s", date, hook.Hostname, hook.Appname, msg)
 
-	bytesWritten, err := hook.udpConn.Write([]byte(payload))
+	bytesWritten, err := hook.tlsConn.Write([]byte(payload))
+
+	// bytesWritten, err := hook.udpConn.Write([]byte(payload))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to send log line to Papertrail via UDP. Wrote %d bytes before error: %v", bytesWritten, err)
+		fmt.Fprintf(os.Stderr, "Unable to send log line to Papertrail via TCP over TLS. Wrote %d bytes before error: %v", bytesWritten, err)
 		return err
 	}
 

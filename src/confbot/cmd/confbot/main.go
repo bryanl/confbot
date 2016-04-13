@@ -7,8 +7,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/kouhin/envflag"
-	"gopkg.in/polds/logrus-papertrail-hook.v2"
 
+	"confbot/logging"
 	"confbot/slack"
 )
 
@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("unable to retrieve app hostname: %v", err)
 	}
 
-	hook, err := logrus_papertrail.NewPapertrailHook(&logrus_papertrail.Hook{
+	hook, err := logging.NewPapertrailHook(&logging.Hook{
 		Host:     *paperTrailHost,
 		Port:     *paperTrailPort,
 		Hostname: hostname,
@@ -60,6 +60,8 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("unable to connect to slack")
 	}
+
+	log.Info("application started")
 
 	for {
 		m, err := s.Receive()
