@@ -11,23 +11,16 @@ import (
 func helloWorldAction(ctx context.Context, m *slack.Message, s *slack.Slack) error {
 	log := logFromContext(ctx)
 
-	ca := slack.CallArgs{
-		"user": m.User,
-	}
-	cr, err := s.Call("users.info", ca)
+	user, err := s.UserInfo(m.User)
 	if err != nil {
 		log.WithError(err).
 			Error("unable to lookup user")
 	}
 
-	user := cr["user"].(map[string]interface{})
-	profile := user["profile"].(map[string]interface{})
-	firstName := profile["first_name"].(string)
-
 	reply := &slack.OutgoingMessage{
 		Channel: m.Channel,
 		Type:    "message",
-		Text:    fmt.Sprintf("Hello %s", firstName),
+		Text:    fmt.Sprintf("Hello %s", user.Profile.FirstName),
 	}
 
 	if err := s.Send(reply); err != nil {

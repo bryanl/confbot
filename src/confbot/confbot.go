@@ -11,17 +11,19 @@ import (
 
 // Confbot is a conference workshop bot.
 type Confbot struct {
-	s   *slack.Slack
-	ctx context.Context
+	repo Repo
+	s    *slack.Slack
+	ctx  context.Context
 
 	textActions []textAction
 }
 
 // New creates an instance of Confbot.
-func New(ctx context.Context, s *slack.Slack) *Confbot {
+func New(ctx context.Context, s *slack.Slack, repo Repo) *Confbot {
 	cb := &Confbot{
-		s:   s,
-		ctx: ctx,
+		repo: repo,
+		s:    s,
+		ctx:  ctx,
 	}
 
 	return cb
@@ -73,6 +75,6 @@ func (c *Confbot) AddTextAction(trigger string, fn ActionFn) error {
 	return nil
 }
 
-func logFromContext(ctx context.Context) *logrus.Logger {
-	return ctx.Value("log").(*logrus.Logger)
+func logFromContext(ctx context.Context) *logrus.Entry {
+	return ctx.Value("log").(*logrus.Entry)
 }

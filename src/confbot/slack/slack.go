@@ -3,6 +3,7 @@ package slack
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sync/atomic"
@@ -20,7 +21,7 @@ const (
 
 // Slack is a connection to Slack.
 type Slack struct {
-	log            *logrus.Logger
+	log            *logrus.Entry
 	token          string
 	ws             *websocket.Conn
 	id             string
@@ -39,7 +40,7 @@ func New(ctx context.Context, token string) (*Slack, error) {
 		return nil, err
 	}
 
-	logger := ctx.Value("log").(*logrus.Logger)
+	logger := ctx.Value("log").(*logrus.Entry)
 
 	return &Slack{
 		log:   logger,
@@ -96,6 +97,23 @@ func (s *Slack) SendToChannel(msg, channel string) error {
 	return s.Send(om)
 }
 
+// UserInfo returns infor about a user.
+func (s *Slack) UserInfo(userID string) (*User, error) {
+	ca := CallArgs{"user": userID}
+	resp, err := s.Call("users.info", ca, UnmarshalUser)
+	if err != nil {
+		s.log.WithError(err).
+			WithFields(logrus.Fields{
+			"api_call": "users.info",
+		}).Error("unable to lookup user")
+		return nil, err
+	}
+
+	user := resp.(User)
+
+	return &user, nil
+}
+
 // CallArgs are arguments to a Call request.
 type CallArgs map[string]string
 
@@ -103,9 +121,9 @@ type CallArgs map[string]string
 type CallResults map[string]interface{}
 
 // Call a Slack web api method.
-func (s *Slack) Call(endpoint string, args CallArgs) (CallResults, error) {
+func (s *Slack) Call(endpoint string, args CallArgs, fn UnmarshalFn) (interface{}, error) {
 	args["token"] = s.token
-	return call(endpoint, args)
+	return call(endpoint, args, fn)
 }
 
 // start starts a slack connection with rtm.start, and returns a websock URL and user ID, or an error.
@@ -113,10 +131,12 @@ func start(token string) (string, string, error) {
 	args := CallArgs{}
 
 	args["token"] = token
-	cr, err := call("rtm.start", args)
+	resp, err := call("rtm.start", args, UnmarshalMap)
 	if err != nil {
 		return "", "", err
 	}
+
+	cr := resp.(map[string]interface{})
 
 	if !cr["ok"].(bool) {
 		errStr := cr["error"].(string)
@@ -130,7 +150,18 @@ func start(token string) (string, string, error) {
 	return u, id, nil
 }
 
-func call(endpoint string, args CallArgs) (CallResults, error) {
+// UnmarshalFn is a function that unmarshals a response to a type.
+type UnmarshalFn func(b []byte) (interface{}, error)
+
+func call(endpoint string, args CallArgs, fn UnmarshalFn) (interface{}, error) {
+	body, err := call2(endpoint, args)
+	if err != nil {
+		return nil, err
+	}
+	return fn(body)
+}
+
+func call2(endpoint string, args CallArgs) ([]byte, error) {
 	u, err := url.Parse(apiURL)
 	if err != nil {
 		return nil, err
@@ -155,12 +186,27 @@ func call(endpoint string, args CallArgs) (CallResults, error) {
 	}
 
 	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
+}
 
-	var cr CallResults
-	err = json.NewDecoder(resp.Body).Decode(&cr)
+// UnmarshalUser unmarshals a slack response as a user.
+func UnmarshalUser(b []byte) (interface{}, error) {
+	var u User
+	err := json.Unmarshal(b, &u)
 	if err != nil {
-		return nil, fmt.Errorf("could not decode slack API response body: %v", err)
+		return nil, err
 	}
 
-	return cr, nil
+	return &u, nil
+}
+
+// UnmarshalMap unmarshals a slack api response as a map.
+func UnmarshalMap(b []byte) (interface{}, error) {
+	var m map[string]interface{}
+	err := json.Unmarshal(b, &m)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }

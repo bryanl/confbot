@@ -38,12 +38,29 @@ var (
 )
 
 // CreateBootShellAction returns a function that boot a new shell.
-func CreateBootShellAction(ctx context.Context, doToken string) ActionFn {
+func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) ActionFn {
 	log := logFromContext(ctx)
-	sb := NewShellBooter(doToken, log)
+	id := projectID()
+	sb := NewShellBooter(id, doToken, log)
 
 	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
-		log := logFromContext(ctx)
+		userID := m.User
+		err := repo.RegisterProject(id, userID)
+
+		if err != nil {
+			switch err.(type) {
+			case *ProjectExistsErr:
+				if sErr := s.SendToChannel(fmt.Sprintf("unable to boot shell: %v", err), m.Channel); sErr != nil {
+					return err
+				}
+
+			default:
+				if sErr := s.SendToChannel(fmt.Sprintf("unknown error: %v", err), m.Channel); sErr != nil {
+					return err
+				}
+			}
+			return err
+		}
 
 		if err := s.SendToChannel("booting shell", m.Channel); err != nil {
 			return err
@@ -80,13 +97,15 @@ type ShellConfig struct {
 
 // ShellBooter boots shells for demos.
 type ShellBooter struct {
+	id      string
 	doToken string
-	log     *logrus.Logger
+	log     *logrus.Entry
 }
 
 // NewShellBooter creates an instance of ShellBooter,
-func NewShellBooter(doToken string, log *logrus.Logger) *ShellBooter {
+func NewShellBooter(id, doToken string, log *logrus.Entry) *ShellBooter {
 	return &ShellBooter{
+		id:      id,
 		doToken: doToken,
 		log:     log,
 	}
