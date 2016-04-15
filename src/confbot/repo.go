@@ -27,6 +27,7 @@ func (e ProjectExistsErr) Error() string {
 // Repo is a repository for managing confbot data
 type Repo interface {
 	RegisterProject(id, userID string) error
+	ProjectID(userID string) (string, error)
 }
 
 // NewRepo creates an instance of Repo. Repo is currently
@@ -85,6 +86,22 @@ func (rr *redisRepo) RegisterProject(id, userID string) error {
 	}
 
 	return nil
+}
+
+func (rr *redisRepo) ProjectID(userID string) (string, error) {
+	conn, err := rr.pool.Get()
+	if err != nil {
+		return "", err
+	}
+	defer rr.pool.Put(conn)
+
+	k := rr.key("projects")
+	id, err := conn.Cmd("HGET", k, userID).Str()
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
 }
 
 func (rr *redisRepo) key(suffix string) string {

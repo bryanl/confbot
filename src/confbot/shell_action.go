@@ -47,22 +47,34 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 		userID := m.User
 		err := repo.RegisterProject(id, userID)
 
+		log.WithFields(logrus.Fields{
+			"user-id":    userID,
+			"project-id": id,
+		}).Info("new shell request")
+
 		if err != nil {
 			switch err.(type) {
 			case *ProjectExistsErr:
-				if sErr := s.SendToChannel(fmt.Sprintf("unable to boot shell: %v", err), m.Channel); sErr != nil {
+				if sErr := s.IM(userID, fmt.Sprintf("unable to boot shell: %v", err)); sErr != nil {
+					return sErr
+				}
+
+				id, err = repo.ProjectID(userID)
+				if err != nil {
 					return err
 				}
 
+				_ = s.IM(userID, fmt.Sprintf("You already have an existing shell at *%s*", id))
+
 			default:
-				if sErr := s.SendToChannel(fmt.Sprintf("unknown error: %v", err), m.Channel); sErr != nil {
-					return err
+				if sErr := s.IM(userID, fmt.Sprintf("unknown error: %v", err)); sErr != nil {
+					return sErr
 				}
 			}
 			return err
 		}
 
-		if err := s.SendToChannel("booting shell", m.Channel); err != nil {
+		if err := s.IM(userID, "booting shell"); err != nil {
 			return err
 		}
 
@@ -71,12 +83,12 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 		if err != nil {
 			log.WithError(err).Error("couldn't boot shell")
 			msg := fmt.Sprintf("couldn't boot shell: %s", err)
-			if err := s.SendToChannel(msg, m.Channel); err != nil {
+			if err := s.IM(userID, msg); err != nil {
 				return err
 			}
 		} else {
 			msg := fmt.Sprintf("booted shell *%s*", sc.Hostname)
-			if err := s.SendToChannel(msg, m.Channel); err != nil {
+			if err := s.IM(userID, msg); err != nil {
 				return err
 			}
 		}
@@ -113,12 +125,12 @@ func NewShellBooter(id, doToken string, log *logrus.Entry) *ShellBooter {
 
 // Boot does the boot process.
 func (sb *ShellBooter) Boot() (*ShellConfig, error) {
+	id := sb.id
+
 	kp, err := sb.makeSSHKeyPair()
 	if err != nil {
 		return nil, err
 	}
-
-	id := projectID()
 
 	td := templateData{
 		PubKey:               string(kp.public),
@@ -182,8 +194,8 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 	}
 
 	sb.log.WithFields(logrus.Fields{
-		"project_id":  id,
-		"action_href": action.HREF,
+		"project_id": id,
+		"action_id":  action.ID,
 	}).Info("waiting for droplet to boot")
 
 	err = util.WaitForActive(client, action.HREF)

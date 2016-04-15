@@ -2,6 +2,7 @@ package slack
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -97,15 +98,34 @@ func (s *Slack) SendToChannel(msg, channel string) error {
 	return s.Send(om)
 }
 
+// IM sends an instance essage to a user.
+func (s Slack) IM(userID, msg string) error {
+	ca := CallArgs{"user": userID}
+
+	s.log.WithField("user_id", userID).Info("sending IM")
+
+	resp, err := s.Call("im.open", ca, UnmarshalIMOpen)
+	if err != nil {
+		return err
+	}
+
+	im := resp.(*IM)
+	if !im.OK {
+		s.log.WithFields(logrus.Fields{
+			"user_id": userID,
+			"err":     im.Error}).
+			Error("unable to open im channel")
+		return errors.New("unable to open im channel")
+	}
+
+	return s.SendToChannel(msg, im.Channel.ID)
+}
+
 // UserInfo returns infor about a user.
 func (s *Slack) UserInfo(userID string) (*User, error) {
 	ca := CallArgs{"user": userID}
 	resp, err := s.Call("users.info", ca, UnmarshalUser)
 	if err != nil {
-		s.log.WithError(err).
-			WithFields(logrus.Fields{
-			"api_call": "users.info",
-		}).Error("unable to lookup user")
 		return nil, err
 	}
 
@@ -123,7 +143,17 @@ type CallResults map[string]interface{}
 // Call a Slack web api method.
 func (s *Slack) Call(endpoint string, args CallArgs, fn UnmarshalFn) (interface{}, error) {
 	args["token"] = s.token
-	return call(endpoint, args, fn)
+	resp, err := call(endpoint, args, fn)
+	if err != nil {
+		s.log.WithError(err).
+			WithFields(logrus.Fields{
+			"endpoint": endpoint,
+		}).Error("error calling Slack API")
+
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // start starts a slack connection with rtm.start, and returns a websock URL and user ID, or an error.
@@ -198,6 +228,17 @@ func UnmarshalUser(b []byte) (interface{}, error) {
 	}
 
 	return &u, nil
+}
+
+// UnmarshalIMOpen unmarshals a slack response as a im open.
+func UnmarshalIMOpen(b []byte) (interface{}, error) {
+	var i IM
+	err := json.Unmarshal(b, &i)
+	if err != nil {
+		return nil, err
+	}
+
+	return &i, nil
 }
 
 // UnmarshalMap unmarshals a slack api response as a map.

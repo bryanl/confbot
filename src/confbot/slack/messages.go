@@ -223,3 +223,15 @@ type UserProfile struct {
 	Image72   string `json:"image_72,omitempty"`
 	Image192  string `json:"image_192,omitempty"`
 }
+
+// IM is a create IM response.
+type IM struct {
+	OK      bool      `json:"ok,omitempty"`
+	Channel IMChannel `json:"channel,omitempty"`
+	Error   string    `json:"error,omitempty"`
+}
+
+// IMChannel is a channel for IM.
+type IMChannel struct {
+	ID string `json:"ID,omitempty"`
+}

@@ -44,9 +44,22 @@ func (c *Confbot) Listen() {
 		go func(m *slack.Message) {
 			for _, ta := range c.textActions {
 				if ta.re.Match([]byte(m.Text)) {
-					ta.fn(c.ctx, m, s)
+					err := ta.fn(c.ctx, m, s)
+					if err != nil {
+						log.WithError(err).
+							WithField("action", m.Text).
+							Error("could not run action")
+					}
+
+					return
 				}
 			}
+
+			log.WithFields(logrus.Fields{
+				"type":    m.Type,
+				"channel": m.Channel,
+				"user":    m.User,
+			}).Info("unhandled message")
 		}(m)
 	}
 }
