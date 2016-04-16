@@ -1,6 +1,7 @@
 package confbot
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -28,6 +29,7 @@ func (e ProjectExistsErr) Error() string {
 type Repo interface {
 	RegisterProject(id, userID string) error
 	ProjectID(userID string) (string, error)
+	User(projectID string) (string, error)
 }
 
 // NewRepo creates an instance of Repo. Repo is currently
@@ -85,6 +87,12 @@ func (rr *redisRepo) RegisterProject(id, userID string) error {
 		return err
 	}
 
+	k = rr.key("users")
+	_, err = conn.Cmd("HSET", k, id, userID).Int()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -99,6 +107,27 @@ func (rr *redisRepo) ProjectID(userID string) (string, error) {
 	id, err := conn.Cmd("HGET", k, userID).Str()
 	if err != nil {
 		return "", err
+	}
+
+	return id, nil
+}
+
+func (rr *redisRepo) User(projectID string) (string, error) {
+	conn, err := rr.pool.Get()
+	if err != nil {
+		return "", err
+	}
+	defer rr.pool.Put(conn)
+
+	k := rr.key("users")
+	id, err := conn.Cmd("HGET", k, projectID).Str()
+	if err != nil {
+		rr.log.WithError(err).
+			WithFields(logrus.Fields{
+			"key":       k,
+			"projectID": projectID}).
+			Error("fetch project id by user")
+		return "", fmt.Errorf("fetch user by project id: %v", err)
 	}
 
 	return id, nil

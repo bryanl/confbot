@@ -88,25 +88,33 @@ func (s *Slack) Send(om *OutgoingMessage) error {
 }
 
 // SendToChannel sends a text message to a channel.
-func (s *Slack) SendToChannel(msg, channel string) error {
-	om := &OutgoingMessage{
-		Channel: channel,
-		Type:    "message",
-		Text:    msg,
+func (s *Slack) SendToChannel(msg, channel string) (*Message, error) {
+	ca := CallArgs{
+		"channel": channel,
+		"text":    msg,
+		"as_user": true,
 	}
 
-	return s.Send(om)
+	s.log.WithField("channel", channel).Info("chat.postMessage")
+
+	resp, err := s.Call("chat.postMessage", ca, UnmarshalMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	m := resp.(*Message)
+	return m, nil
 }
 
 // IM sends an instance essage to a user.
-func (s Slack) IM(userID, msg string) error {
+func (s Slack) IM(userID, msg string) (*Message, error) {
 	ca := CallArgs{"user": userID}
 
 	s.log.WithField("user_id", userID).Info("sending IM")
 
 	resp, err := s.Call("im.open", ca, UnmarshalIMOpen)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	im := resp.(*IM)
@@ -115,7 +123,7 @@ func (s Slack) IM(userID, msg string) error {
 			"user_id": userID,
 			"err":     im.Error}).
 			Error("unable to open im channel")
-		return errors.New("unable to open im channel")
+		return nil, errors.New("unable to open im channel")
 	}
 
 	return s.SendToChannel(msg, im.Channel.ID)
@@ -134,8 +142,30 @@ func (s *Slack) UserInfo(userID string) (*User, error) {
 	return &user, nil
 }
 
+// AddReaction adds a reaction to a message
+func (s *Slack) AddReaction(msgID, channel, reaction string) error {
+	ca := CallArgs{
+		"name":      reaction,
+		"channel":   channel,
+		"timestamp": msgID,
+	}
+	_, err := s.Call("reactions.add", ca, UnmarshalMap)
+	return err
+}
+
+// RemoveReaction removes a reaction from a message
+func (s *Slack) RemoveReaction(msgID, channel, reaction string) error {
+	ca := CallArgs{
+		"name":      reaction,
+		"channel":   channel,
+		"timestamp": msgID,
+	}
+	_, err := s.Call("reactions.remove", ca, UnmarshalMap)
+	return err
+}
+
 // CallArgs are arguments to a Call request.
-type CallArgs map[string]string
+type CallArgs map[string]interface{}
 
 // CallResults are the result of a Call request
 type CallResults map[string]interface{}
@@ -201,7 +231,19 @@ func call2(endpoint string, args CallArgs) ([]byte, error) {
 	values := u.Query()
 
 	for k, v := range args {
-		values.Set(k, v)
+		var vStr string
+		switch v.(type) {
+		case bool:
+			if v.(bool) {
+				vStr = "true"
+			} else {
+				vStr = "false"
+			}
+		default:
+			vStr = v.(string)
+
+		}
+		values.Set(k, vStr)
 	}
 
 	u.RawQuery = values.Encode()
@@ -230,7 +272,7 @@ func UnmarshalUser(b []byte) (interface{}, error) {
 	return &u, nil
 }
 
-// UnmarshalIMOpen unmarshals a slack response as a im open.
+// UnmarshalIMOpen unmarshals a slack response as an im open.
 func UnmarshalIMOpen(b []byte) (interface{}, error) {
 	var i IM
 	err := json.Unmarshal(b, &i)
@@ -239,6 +281,17 @@ func UnmarshalIMOpen(b []byte) (interface{}, error) {
 	}
 
 	return &i, nil
+}
+
+// UnmarshalMessage unmarshals a slack response as a message.
+func UnmarshalMessage(b []byte) (interface{}, error) {
+	var m Message
+	err := json.Unmarshal(b, &m)
+	if err != nil {
+		return nil, err
+	}
+
+	return &m, nil
 }
 
 // UnmarshalMap unmarshals a slack api response as a map.

@@ -23,6 +23,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	reactionUp    = "white_check_mark"
+	reactionNew   = "warning"
+	reactionReady = "100"
+)
+
 var (
 	dropletRegion = "nyc1"
 	dropletSize   = "4gb"
@@ -55,7 +61,7 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 		if err != nil {
 			switch err.(type) {
 			case *ProjectExistsErr:
-				if sErr := s.IM(userID, fmt.Sprintf("unable to boot shell: %v", err)); sErr != nil {
+				if _, sErr := s.IM(userID, fmt.Sprintf("unable to boot shell: %v", err)); sErr != nil {
 					return sErr
 				}
 
@@ -64,33 +70,34 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 					return err
 				}
 
-				_ = s.IM(userID, fmt.Sprintf("You already have an existing shell at *%s*", id))
+				_, _ = s.IM(userID, fmt.Sprintf("You already have an existing shell at *%s*", id))
 
 			default:
-				if sErr := s.IM(userID, fmt.Sprintf("unknown error: %v", err)); sErr != nil {
+				if _, sErr := s.IM(userID, fmt.Sprintf("unknown error: %v", err)); sErr != nil {
 					return sErr
 				}
 			}
 			return err
 		}
 
-		if err := s.IM(userID, "booting shell"); err != nil {
+		var msg *slack.Message
+		if msg, err = s.IM(userID, "booting shell for project _"+id+"_"); err != nil {
 			return err
 		}
 
+		_ = s.AddReaction(msg.Timestamp, msg.Channel, reactionNew)
+
 		var reply slack.OutgoingMessage
-		sc, err := sb.Boot()
+		_, err = sb.Boot()
 		if err != nil {
 			log.WithError(err).Error("couldn't boot shell")
 			msg := fmt.Sprintf("couldn't boot shell: %s", err)
-			if err := s.IM(userID, msg); err != nil {
+			if _, err := s.IM(userID, msg); err != nil {
 				return err
 			}
 		} else {
-			msg := fmt.Sprintf("booted shell *%s*", sc.Hostname)
-			if err := s.IM(userID, msg); err != nil {
-				return err
-			}
+			_ = s.RemoveReaction(msg.Timestamp, msg.Channel, reactionNew)
+			_ = s.AddReaction(msg.Timestamp, msg.Channel, reactionUp)
 		}
 
 		if err := s.Send(&reply); err != nil {
@@ -299,6 +306,8 @@ packages:
   - glusterfs-client
   - glusterfs-server
   - ansible
+runcmd:
+  - [/usr/local/bin/install-shell.sh]
 `
 
 var runShellInstaller = `

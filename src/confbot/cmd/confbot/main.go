@@ -3,6 +3,7 @@ package main
 import (
 	"confbot"
 	"flag"
+	"net/http"
 	"os"
 
 	"golang.org/x/net/context"
@@ -10,6 +11,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/kouhin/envflag"
 
+	"confbot/api"
 	"confbot/logging"
 	"confbot/slack"
 )
@@ -25,6 +27,7 @@ var (
 	paperTrailPort = flag.Int("confbot-papertrail-port", 0, "papertrail port")
 	doToken        = flag.String("confbot-digitalocean-token", "", "digitalocean token")
 	redisURL       = flag.String("redis-url", "", "redis url")
+	httpAddr       = flag.String("confbot-http-addr", "localhost:8080", "api listen address")
 
 	rootLog = logrus.New()
 )
@@ -56,7 +59,13 @@ func main() {
 	cb := confbot.New(ctx, s, repo)
 
 	cb.AddTextAction("./boot shell", confbot.CreateBootShellAction(ctx, *doToken, repo))
-	cb.Listen()
+	go cb.Listen()
+
+	a := api.New(ctx, repo, s)
+	http.Handle("/", a.Mux)
+
+	log.WithField("addr", *httpAddr).Info("created http server")
+	log.Fatal(http.ListenAndServe(*httpAddr, nil))
 }
 
 func verifyEnv(log *logrus.Entry) {
