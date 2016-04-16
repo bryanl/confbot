@@ -28,6 +28,7 @@ var (
 	doToken        = flag.String("confbot-digitalocean-token", "", "digitalocean token")
 	redisURL       = flag.String("redis-url", "", "redis url")
 	httpAddr       = flag.String("confbot-http-addr", "localhost:8080", "api listen address")
+	remoteLogging  = flag.Bool("confbot-enable-remote-logging", false, "enable remote logging")
 
 	rootLog = logrus.New()
 )
@@ -73,11 +74,11 @@ func verifyEnv(log *logrus.Entry) {
 		log.Fatalf("CONFBOT_SLACK_TOKEN environment variable is required")
 	}
 
-	if *paperTrailHost == "" {
+	if *remoteLogging && *paperTrailHost == "" {
 		log.Fatalf("CONFBOT_PAPERTRAIL_HOST environment variable is required")
 	}
 
-	if *paperTrailPort == 0 {
+	if *remoteLogging && *paperTrailPort == 0 {
 		log.Fatalf("CONFBOT_PAPERTRAIL_PORT environment variable is required")
 	}
 
@@ -87,21 +88,23 @@ func verifyEnv(log *logrus.Entry) {
 }
 
 func setupLogger(log *logrus.Entry) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Fatalf("unable to retrieve app hostname: %v", err)
+	if *remoteLogging {
+		hostname, err := os.Hostname()
+		if err != nil {
+			log.Fatalf("unable to retrieve app hostname: %v", err)
+		}
+
+		hook, err := logging.NewPapertrailHook(&logging.Hook{
+			Host:     *paperTrailHost,
+			Port:     *paperTrailPort,
+			Hostname: hostname,
+			Appname:  "confbot",
+		})
+
+		if err != nil {
+			log.WithError(err).Fatalf("unable to set up papertrail logging")
+		}
+
+		rootLog.Hooks.Add(hook)
 	}
-
-	hook, err := logging.NewPapertrailHook(&logging.Hook{
-		Host:     *paperTrailHost,
-		Port:     *paperTrailPort,
-		Hostname: hostname,
-		Appname:  "confbot",
-	})
-
-	if err != nil {
-		log.WithError(err).Fatalf("unable to set up logging")
-	}
-
-	rootLog.Hooks.Add(hook)
 }
