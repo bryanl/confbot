@@ -21,9 +21,9 @@
 			"path": "/query"
 		},
 		{
-			"importpath": "github.com/kouhin/envflag",
-			"repository": "https://github.com/kouhin/envflag",
-			"revision": "0e9a8606164937a324853295ffa8e9803372e765",
+			"importpath": "github.com/kelseyhightower/envconfig",
+			"repository": "https://github.com/kelseyhightower/envconfig",
+			"revision": "cea086319492c3940683ea5e122aa5de70a33923",
 			"branch": "master"
 		},
 		{
