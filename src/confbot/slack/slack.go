@@ -1,12 +1,16 @@
 package slack
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync/atomic"
 
 	"github.com/Sirupsen/logrus"
@@ -107,7 +111,7 @@ func (s *Slack) SendToChannel(msg, channel string) (*Message, error) {
 }
 
 // IM sends an instance essage to a user.
-func (s Slack) IM(userID, msg string) (*Message, error) {
+func (s *Slack) IM(userID, msg string) (*Message, error) {
 	ca := CallArgs{"user": userID}
 
 	s.log.WithField("user_id", userID).Info("sending IM")
@@ -127,6 +131,23 @@ func (s Slack) IM(userID, msg string) (*Message, error) {
 	}
 
 	return s.SendToChannel(msg, im.Channel.ID)
+}
+
+// Upload uploads a reader to a channel.
+func (s *Slack) Upload(filename string, r io.Reader, channels []string) error {
+	ff := formField{
+		r:        r,
+		fileName: filename,
+	}
+
+	ca := CallArgs{
+		"file":     ff,
+		"filename": filename,
+		"channels": strings.Join(channels, ","),
+	}
+
+	_, err := s.Call("files.upload", ca, UnmarshalMap)
+	return err
 }
 
 // UserInfo returns infor about a user.
@@ -221,6 +242,11 @@ func call(endpoint string, args CallArgs, fn UnmarshalFn) (interface{}, error) {
 	return fn(body)
 }
 
+type formField struct {
+	r        io.Reader
+	fileName string
+}
+
 func call2(endpoint string, args CallArgs) ([]byte, error) {
 	u, err := url.Parse(apiURL)
 	if err != nil {
@@ -228,27 +254,52 @@ func call2(endpoint string, args CallArgs) ([]byte, error) {
 	}
 
 	u.Path = "/api/" + endpoint
-	values := u.Query()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
 
 	for k, v := range args {
 		var vStr string
-		switch v.(type) {
+		switch t := v.(type) {
+		case formField:
+			ff := v.(formField)
+			part, err := writer.CreateFormFile(k, ff.fileName)
+			if err != nil {
+				return nil, err
+			}
+
+			if _, err := io.Copy(part, ff.r); err != nil {
+				return nil, err
+			}
+		case string:
+			_ = writer.WriteField(k, v.(string))
 		case bool:
 			if v.(bool) {
 				vStr = "true"
 			} else {
 				vStr = "false"
 			}
+			_ = writer.WriteField(k, vStr)
 		default:
-			vStr = v.(string)
-
+			return nil, fmt.Errorf("unknown field type %v", t)
 		}
-		values.Set(k, vStr)
 	}
 
-	u.RawQuery = values.Encode()
+	err = writer.Close()
+	if err != nil {
+		return nil, err
+	}
 
-	resp, err := http.Get(u.String())
+	req, err := http.NewRequest("POST", u.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+	// req.Write(os.Stdout)
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}

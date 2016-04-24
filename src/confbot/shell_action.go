@@ -46,10 +46,11 @@ var (
 // CreateBootShellAction returns a function that boot a new shell.
 func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) ActionFn {
 	log := logFromContext(ctx)
-	id := projectID()
-	sb := NewShellBooter(id, doToken, log)
 
 	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
+		id := projectID()
+		sb := NewShellBooter(id, doToken, log)
+
 		userID := m.User
 		err := repo.RegisterProject(id, userID)
 
@@ -88,7 +89,7 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 		_ = s.AddReaction(msg.Timestamp, msg.Channel, reactionNew)
 
 		var reply slack.OutgoingMessage
-		_, err = sb.Boot()
+		sc, err := sb.Boot()
 		if err != nil {
 			log.WithError(err).Error("couldn't boot shell")
 			msg := fmt.Sprintf("couldn't boot shell: %s", err)
@@ -104,10 +105,16 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 			return err
 		}
 
+		r := bytes.NewReader(sc.KeyPair.private)
+		if err := s.Upload("id_rsa", r, []string{msg.Channel}); err != nil {
+			return err
+		}
+
 		return nil
 	}
 }
 
+// ShellConfig is the generated configuration for a shell.
 type ShellConfig struct {
 	KeyPair   *KeyPair
 	ProjectID string
