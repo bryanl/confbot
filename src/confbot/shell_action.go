@@ -150,6 +150,10 @@ func (sb *ShellBooter) Boot() (*ShellConfig, error) {
 		return nil, err
 	}
 
+	if sb.doToken == "" {
+		return nil, fmt.Errorf("invalid do token")
+	}
+
 	td := templateData{
 		PubKey:               string(kp.public),
 		EncodedProjectID:     base64.StdEncoding.EncodeToString([]byte(id)),
@@ -300,7 +304,7 @@ write_files:
     path: /etc/project-id
     permissions: '0644'
   - encoding: b64
-    cotent: {{ .EncodedToken }}
+    content: {{ .EncodedToken }}
     owner: root:root
     path: /etc/digitalocean-token
     permissions: '0644'
