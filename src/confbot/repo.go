@@ -33,6 +33,7 @@ type Repo interface {
 	ResetProject(userID string) error
 	ProjectID(userID string) (string, error)
 	User(projectID string) (string, error)
+	GetKey(projectID string) ([]byte, error)
 	SaveKey(projectID string, privateKey []byte) error
 }
 
@@ -189,6 +190,17 @@ func (rr *redisRepo) SaveKey(projectID string, privateKey []byte) error {
 	_, err = conn.Cmd("HSET", k, projectID, privateKey).Int()
 
 	return err
+}
+
+func (rr *redisRepo) GetKey(projectID string) ([]byte, error) {
+	conn, err := rr.pool.Get()
+	if err != nil {
+		return nil, err
+	}
+	defer rr.pool.Put(conn)
+
+	k := rr.key("keys")
+	return conn.Cmd("HGET", k, projectID).Bytes()
 }
 
 func (rr *redisRepo) User(projectID string) (string, error) {
