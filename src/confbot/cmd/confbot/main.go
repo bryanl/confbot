@@ -65,6 +65,7 @@ func main() {
 	cb := confbot.New(ctx, s, repo)
 
 	cb.AddTextAction("./boot shell", confbot.CreateBootShellAction(ctx, spec.DigitalOceanToken, repo))
+	cb.AddTextAction("./delete", confbot.CreateDeleteAction(ctx, spec.DigitalOceanToken, repo))
 	cb.AddTextAction("./reset", confbot.CreateResetAction(ctx, repo))
 	go cb.Listen()
 
