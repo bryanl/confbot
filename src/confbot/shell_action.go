@@ -105,6 +105,10 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 			return err
 		}
 
+		if err := repo.SaveKey(id, sc.KeyPair.private); err != nil {
+			return err
+		}
+
 		r := bytes.NewReader(sc.KeyPair.private)
 		if err := s.Upload("id_rsa", r, []string{msg.Channel}); err != nil {
 			return err
