@@ -9,6 +9,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/mediocregopher/radix.v2/pool"
+	"github.com/mediocregopher/radix.v2/redis"
 )
 
 const (
@@ -29,6 +30,7 @@ func (e ProjectExistsErr) Error() string {
 type Repo interface {
 	Ping() error
 	RegisterProject(id, userID string) error
+	ResetProject(userID string) error
 	ProjectID(userID string) (string, error)
 	User(projectID string) (string, error)
 }
@@ -69,6 +71,8 @@ type redisRepo struct {
 
 var _ Repo = (*redisRepo)(nil)
 
+type redisCmd func(*redis.Client) error
+
 func (rr *redisRepo) Ping() error {
 	conn, err := rr.pool.Get()
 	if err != nil {
@@ -84,6 +88,42 @@ func (rr *redisRepo) Ping() error {
 
 	if res != "PONG" {
 		return fmt.Errorf("unexpected PING reply from redis: %s", res)
+	}
+
+	return nil
+}
+
+func (rr *redisRepo) ResetProject(userID string) error {
+	conn, err := rr.pool.Get()
+	if err != nil {
+		return err
+	}
+	defer rr.pool.Put(conn)
+
+	log := rr.log.WithField("user-id", userID)
+
+	projectsKey := rr.key("projects")
+	log.Info("deleting user entry")
+	if _, err = conn.Cmd("HDEL", projectsKey, userID).Int(); err != nil {
+		log.WithError(err).Error("unable to delete project entry")
+		return err
+	}
+
+	usersKey := rr.key("users")
+	m, err := conn.Cmd("HGETALL", usersKey).Map()
+	if err != nil {
+		return err
+	}
+
+	for k, v := range m {
+		log := log.WithField("project-id", v)
+		if v == userID {
+			log.Info("deleting project entry")
+			if i, err := conn.Cmd("HDEL", usersKey, k).Int(); err != nil {
+				log.WithField("items-deleted", i).WithError(err).Error("unable to delete project")
+				return err
+			}
+		}
 	}
 
 	return nil
