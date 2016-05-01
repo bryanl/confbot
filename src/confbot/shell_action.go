@@ -184,7 +184,7 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 	oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
 	client := godo.NewClient(oauthClient)
 
-	dropletName := fmt.Sprintf("shell-%s", id)
+	dropletName := fmt.Sprintf("shell.%s", id)
 	sb.log.WithFields(logrus.Fields{
 		"project_id": id,
 	}).Info("creating shell droplet")
