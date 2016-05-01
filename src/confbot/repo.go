@@ -27,6 +27,7 @@ func (e ProjectExistsErr) Error() string {
 
 // Repo is a repository for managing confbot data
 type Repo interface {
+	Ping() error
 	RegisterProject(id, userID string) error
 	ProjectID(userID string) (string, error)
 	User(projectID string) (string, error)
@@ -53,6 +54,10 @@ func NewRepo(ctx context.Context, redisURL, env string) (Repo, error) {
 		log:       logFromContext(ctx),
 	}
 
+	if err := repo.Ping(); err != nil {
+		return nil, err
+	}
+
 	return repo, nil
 }
 
@@ -63,6 +68,26 @@ type redisRepo struct {
 }
 
 var _ Repo = (*redisRepo)(nil)
+
+func (rr *redisRepo) Ping() error {
+	conn, err := rr.pool.Get()
+	if err != nil {
+		return err
+	}
+
+	defer rr.pool.Put(conn)
+
+	res, err := conn.Cmd("PING").Str()
+	if err != nil {
+		return err
+	}
+
+	if res != "PONG" {
+		return fmt.Errorf("unexpected PING reply from redis: %s", res)
+	}
+
+	return nil
+}
 
 func (rr *redisRepo) RegisterProject(id, userID string) error {
 	conn, err := rr.pool.Get()
