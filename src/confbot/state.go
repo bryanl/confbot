@@ -6,7 +6,7 @@ type stateFn func(*provision) stateFn
 
 func initState(p *provision) stateFn {
 	p.log.WithField("state", "initState").Info("running initState")
-	if _, err := p.slack.IM(p.userID, "*--- provisioning process completed ---*"); err != nil {
+	if _, err := p.slack.IM(p.userID, "*--- provisioning process started ---*"); err != nil {
 		return errorStateGen(err)
 	}
 	return infraState
