@@ -198,7 +198,7 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 		UserData: t,
 	}
 
-	_, resp, err := client.Droplets.Create(cr)
+	d, resp, err := client.Droplets.Create(cr)
 	if err != nil {
 		return err
 	}
@@ -229,7 +229,24 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 		"project_id": id,
 	}).Info("droplet booted")
 
-	return nil
+	d, _, err = client.Droplets.Get(d.ID)
+	if err != nil {
+		return err
+	}
+
+	ip, err := d.PublicIPv4()
+	if err != nil {
+		return err
+	}
+
+	drer := &godo.DomainRecordEditRequest{
+		Type: "A",
+		Name: dropletName,
+		Data: ip,
+	}
+	_, _, err = client.Domains.CreateRecord(dropletDomain, drer)
+
+	return err
 }
 
 // KeyPair is a SSH key pair.

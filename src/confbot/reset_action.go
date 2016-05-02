@@ -10,11 +10,9 @@ import (
 
 // CreateResetAction returns a function that can reset a current user's settings.
 func CreateResetAction(ctx context.Context, repo Repo) ActionFn {
-	log := logFromContext(ctx)
-
 	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
 		userID := m.User
-		log = log.WithFields(logrus.Fields{"user-id": userID})
+		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": userID})
 
 		log.Info("reseting project")
 

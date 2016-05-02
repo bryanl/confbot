@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/Sirupsen/logrus"
+
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -15,13 +18,15 @@ const (
 type SSHClient struct {
 	projectID string
 	repo      Repo
+	log       *logrus.Entry
 }
 
 // NewSSHClient builds an instance of SSHClient.
-func NewSSHClient(projectID string, repo Repo) *SSHClient {
+func NewSSHClient(ctx context.Context, projectID string, repo Repo) *SSHClient {
 	return &SSHClient{
 		projectID: projectID,
 		repo:      repo,
+		log:       logFromContext(ctx).WithField("project-id", projectID),
 	}
 }
 
@@ -44,11 +49,13 @@ func (s *SSHClient) Execute(host, cmd string) (string, error) {
 		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
 	}
 
+	s.log.WithField("hostname", hostname).Info("dialing")
 	conn, err := ssh.Dial("tcp", hostname, config)
 	if err != nil {
 		return "", err
 	}
 
+	s.log.WithField("hostname", hostname).Info("creating session")
 	session, err := conn.NewSession()
 	if err != nil {
 		return "", err
@@ -59,6 +66,10 @@ func (s *SSHClient) Execute(host, cmd string) (string, error) {
 	var buf bytes.Buffer
 	session.Stdout = &buf
 
+	s.log.WithFields(logrus.Fields{
+		"hostname": hostname,
+		"cmd":      cmd}).
+		Info("running command")
 	err = session.Run(cmd)
 	if err != nil {
 		return "", err
