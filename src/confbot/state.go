@@ -1,6 +1,10 @@
 package confbot
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/Sirupsen/logrus"
+)
 
 type stateFn func(*provision) stateFn
 
@@ -32,6 +36,38 @@ func infraState(p *provision) stateFn {
 	}
 
 	if _, err := p.slack.IM(p.userID, "*infrastructure provisioned*"); err != nil {
+		return errorStateGen(err)
+	}
+
+	return certsState
+}
+
+func certsState(p *provision) stateFn {
+	log := p.log.WithField("state", "certState")
+	sshClient := NewSSHClient(p.ctx, p.projectID, p.repo)
+
+	if _, err := p.slack.IM(p.userID, "*update root certificates*"); err != nil {
+		return errorStateGen(err)
+	}
+
+	out, err := sshClient.Execute("shell", `sudo perl -pi -e 's/^\!//' /etc/ca-certificates.conf`)
+	if err != nil {
+		log.WithError(err).Error("verify ca certificates")
+		return errorStateGen(err)
+
+	}
+
+	if err := uploadOutput(p, log, "verify-cert.txt", out); err != nil {
+		return errorStateGen(err)
+	}
+
+	out, err = sshClient.Execute("shell", `sudo update-ca-certificates`)
+	if err != nil {
+		log.WithError(err).Error("update ca certificates")
+		return errorStateGen(err)
+	}
+
+	if err := uploadOutput(p, log, "update-cert.txt", out); err != nil {
 		return errorStateGen(err)
 	}
 
@@ -78,5 +114,17 @@ func completeState(p *provision) stateFn {
 	log := p.log.WithField("state", "completeState")
 	log.Info("provision complete")
 	_, _ = p.slack.IM(p.userID, "*--- provisioning process completed ---*")
+	return nil
+}
+
+func uploadOutput(p *provision, log *logrus.Entry, name, out string) error {
+	r := strings.NewReader(out)
+	if err := p.slack.Upload(name, r, []string{p.channel}); err != nil {
+		log.WithError(err).
+			WithField("file-name", name).
+			Errorf("provision upload")
+		return err
+	}
+
 	return nil
 }
