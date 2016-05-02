@@ -68,6 +68,7 @@ func main() {
 	cb.AddTextAction("./delete", confbot.CreateDeleteAction(ctx, spec.DigitalOceanToken, repo))
 	cb.AddTextAction("./reset", confbot.CreateResetAction(ctx, repo))
 	cb.AddTextAction("./provision", confbot.CreateProvisionAction(ctx, repo))
+	cb.AddTextAction("./settings", confbot.CreateSettingsAction(repo))
 	go cb.Listen()
 
 	a := api.New(ctx, repo, s)
