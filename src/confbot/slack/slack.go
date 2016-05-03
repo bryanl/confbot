@@ -92,11 +92,12 @@ func (s *Slack) Send(om *OutgoingMessage) error {
 }
 
 // SendToChannel sends a text message to a channel.
-func (s *Slack) SendToChannel(msg, channel string) (*Message, error) {
+func (s *Slack) SendToChannel(msg, channel string, attachments ...Attachment) (*Message, error) {
 	ca := CallArgs{
-		"channel": channel,
-		"text":    msg,
-		"as_user": true,
+		"channel":     channel,
+		"text":        msg,
+		"as_user":     true,
+		"attachments": attachments,
 	}
 
 	s.log.WithField("channel", channel).Info("chat.postMessage")
@@ -111,7 +112,7 @@ func (s *Slack) SendToChannel(msg, channel string) (*Message, error) {
 }
 
 // IM sends an instance essage to a user.
-func (s *Slack) IM(userID, msg string) (*Message, error) {
+func (s *Slack) IM(userID, msg string, attachments ...Attachment) (*Message, error) {
 	ca := CallArgs{"user": userID}
 
 	s.log.WithField("user_id", userID).Info("sending IM")
@@ -130,7 +131,7 @@ func (s *Slack) IM(userID, msg string) (*Message, error) {
 		return nil, errors.New("unable to open im channel")
 	}
 
-	return s.SendToChannel(msg, im.Channel.ID)
+	return s.SendToChannel(msg, im.Channel.ID, attachments...)
 }
 
 // Upload uploads a reader to a channel.
@@ -280,8 +281,14 @@ func call2(endpoint string, args CallArgs) ([]byte, error) {
 				vStr = "false"
 			}
 			_ = writer.WriteField(k, vStr)
+		case []Attachment:
+			b, err := json.Marshal(v)
+			if err != nil {
+				return nil, err
+			}
+			_ = writer.WriteField(k, string(b))
 		default:
-			return nil, fmt.Errorf("unknown field type %v", t)
+			return nil, fmt.Errorf("unknown field type (%T) %v", t, t)
 		}
 	}
 
@@ -296,7 +303,6 @@ func call2(endpoint string, args CallArgs) ([]byte, error) {
 	}
 
 	req.Header.Add("Content-Type", writer.FormDataContentType())
-	// req.Write(os.Stdout)
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
