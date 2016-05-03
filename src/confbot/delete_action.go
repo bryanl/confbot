@@ -14,6 +14,7 @@ import (
 // CreateDeleteAction returns a function that deletes a project.
 func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn {
 	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
+		var err error
 		userID := m.User
 
 		log := logFromContext(ctx).WithField("user-id", userID)
@@ -23,7 +24,14 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 			return err
 		}
 
-		if _, err := s.IM(userID, fmt.Sprintf("deleting project _%s_", projectID)); err != nil {
+		defer func() {
+			if err != nil {
+				log.WithError(err).Error("unable to delete project")
+				_, _ = s.IM(userID, fmt.Sprintf("unable to delete project _%s_", projectID))
+			}
+		}()
+
+		if _, err = s.IM(userID, fmt.Sprintf("deleting project _%s_", projectID)); err != nil {
 			return err
 		}
 
@@ -32,36 +40,38 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 		oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
 		client := godo.NewClient(oauthClient)
 
-		defer func() {
-			if err != nil {
-				log.WithError(err).Error("unable to delete project")
-			}
-		}()
-
-		if _, err := s.IM(userID, "*deleting dns records*"); err != nil {
+		if _, err = s.IM(userID, "*deleting dns records*"); err != nil {
 			return err
 		}
 
-		if err := deleteRecords(client, projectID, dropletDomain); err != nil {
+		if err = deleteRecords(client, projectID, dropletDomain); err != nil {
 			return err
 		}
-		if _, err := s.IM(userID, "*deleting keys*"); err != nil {
-			return err
-		}
-
-		if err := deleteKeys(client, projectID); err != nil {
+		if _, err = s.IM(userID, "*deleting keys*"); err != nil {
 			return err
 		}
 
-		if _, err := s.IM(userID, "*deleting droplets*"); err != nil {
+		if err = deleteKeys(client, projectID); err != nil {
 			return err
 		}
 
-		if err := deleteDroplets(client, projectID); err != nil {
+		if _, err = s.IM(userID, "*deleting droplets*"); err != nil {
 			return err
 		}
 
-		if err := repo.ResetProject(userID); err != nil {
+		if err = deleteDroplets(client, projectID); err != nil {
+			return err
+		}
+
+		if _, err = s.IM(userID, "*resetting project*"); err != nil {
+			return err
+		}
+
+		if err = repo.ResetProject(userID); err != nil {
+			return err
+		}
+
+		if _, err = s.IM(userID, fmt.Sprintf("project _%s_ deleted", projectID)); err != nil {
 			return err
 		}
 
