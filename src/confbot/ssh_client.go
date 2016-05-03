@@ -72,7 +72,7 @@ func (s *SSHClient) Execute(host, cmd string) (string, error) {
 		Info("running command")
 	err = session.Run(cmd)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s\n%s", err, buf.String())
 	}
 
 	return buf.String(), nil

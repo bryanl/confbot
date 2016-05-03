@@ -1,7 +1,11 @@
 package confbot
 
 import (
+	"errors"
+	"fmt"
+	"net"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 )
@@ -76,7 +80,6 @@ func certsState(p *provision) stateFn {
 
 func ansibleState(p *provision) stateFn {
 	log := p.log.WithField("state", "ansibleState")
-
 	sshClient := NewSSHClient(p.ctx, p.projectID, p.repo)
 
 	if _, err := p.slack.IM(p.userID, "*starting ansible -- this may take a few minutes*"); err != nil {
@@ -96,6 +99,60 @@ func ansibleState(p *provision) stateFn {
 	}
 
 	if _, err := p.slack.IM(p.userID, "*ansible complete*"); err != nil {
+		return errorStateGen(err)
+	}
+
+	return esState
+}
+
+func esState(p *provision) stateFn {
+	log := p.log.WithField("state", "esState")
+	sshClient := NewSSHClient(p.ctx, p.projectID, p.repo)
+
+	if _, err := p.slack.IM(p.userID, "*waiting for elasticsearch to boot*"); err != nil {
+		return errorStateGen(err)
+	}
+
+	c := 1
+	for {
+		if c > 5 {
+			return errorStateGen(errors.New("timed out while waiting for elasticsearch to answer"))
+		}
+
+		host := fmt.Sprintf("app.%s.%s:9200", p.projectID, dropletDomain)
+		log.WithField("count", c).Info("check to see if elasticsearch is up")
+		conn, err := net.DialTimeout("tcp", host, time.Minute*1)
+		if err == nil {
+			log.WithField("count", c).Info("elasticsearch is up")
+			conn.Close()
+			break
+		}
+
+		log.WithError(err).Warn("connection to elasticsearch")
+		c++
+	}
+
+	if _, err := p.slack.IM(p.userID, "*elasticsearch is up and listening*"); err != nil {
+		return errorStateGen(err)
+	}
+
+	if _, err := p.slack.IM(p.userID, "*uploading elasticsearch templates*"); err != nil {
+		return errorStateGen(err)
+	}
+
+	out, err := sshClient.Execute("shell", "curl https://s3.pifft.com/oscon2016/create-beats.sh | bash")
+	if err != nil {
+		log.WithError(err).Error("create beats")
+		return errorStateGen(err)
+	}
+
+	r := strings.NewReader(out)
+	if err := p.slack.Upload("es.txt", r, []string{p.channel}); err != nil {
+		log.WithError(err).Error("upload es.txt")
+		return errorStateGen(err)
+	}
+
+	if _, err := p.slack.IM(p.userID, "*templates have been uploaded*"); err != nil {
 		return errorStateGen(err)
 	}
 
