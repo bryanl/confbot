@@ -31,7 +31,7 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 			}
 		}()
 
-		if _, err = s.IM(userID, fmt.Sprintf("deleting project _%s_", projectID)); err != nil {
+		if _, err = s.IM(userID, fmt.Sprintf("Deleting project _%s_ and it's associated resources", projectID)); err != nil {
 			return err
 		}
 
@@ -40,14 +40,14 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 		oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
 		client := godo.NewClient(oauthClient)
 
-		if _, err = s.IM(userID, "*deleting dns records*"); err != nil {
+		if _, err = s.IM(userID, "*... Deleting DNS records*"); err != nil {
 			return err
 		}
 
 		if err = deleteRecords(client, projectID, dropletDomain); err != nil {
 			return err
 		}
-		if _, err = s.IM(userID, "*deleting keys*"); err != nil {
+		if _, err = s.IM(userID, "*... Deleting SSH Keys*"); err != nil {
 			return err
 		}
 
@@ -55,7 +55,7 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 			return err
 		}
 
-		if _, err = s.IM(userID, "*deleting droplets*"); err != nil {
+		if _, err = s.IM(userID, "*... Deleting Droplets*"); err != nil {
 			return err
 		}
 
@@ -63,7 +63,7 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 			return err
 		}
 
-		if _, err = s.IM(userID, "*resetting project*"); err != nil {
+		if _, err = s.IM(userID, fmt.Sprintf("*... Resetting project for _%s_ *", m.Name)); err != nil {
 			return err
 		}
 
@@ -71,7 +71,7 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 			return err
 		}
 
-		if _, err = s.IM(userID, fmt.Sprintf("project _%s_ deleted", projectID)); err != nil {
+		if _, err = s.IM(userID, fmt.Sprintf("Project _%s_ has been deleted. Send command `./boot shell` to start a new project.", projectID)); err != nil {
 			return err
 		}
 
