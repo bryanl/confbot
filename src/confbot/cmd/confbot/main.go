@@ -33,6 +33,7 @@ type Specification struct {
 	RedisURL          string `envconfig:"redis_url" required:"true"`
 	HTTPAddr          string `envconfig:"http_addr" default:"localhost:8080"`
 	RemoteLogging     bool   `envconfig:"remote_logging" default:"false"`
+	BotName           string `envconfig:"bot_name" required:"true"`
 }
 
 func main() {
@@ -50,7 +51,7 @@ func main() {
 
 	ctx := context.WithValue(context.Background(), "log", log)
 
-	s, err := slack.New(ctx, spec.SlackToken)
+	s, err := slack.New(ctx, spec.SlackToken, spec.BotName)
 	if err != nil {
 		rootLog.WithError(err).Fatal("unable to connect to slack")
 	}

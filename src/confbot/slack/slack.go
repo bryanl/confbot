@@ -32,12 +32,14 @@ type Slack struct {
 	ws             *websocket.Conn
 	id             string
 	messageCounter uint64
+	botName        string
+	BotID          string
 
 	mu sync.Mutex
 }
 
 // New creates an instance of Slack given a Slack token.
-func New(ctx context.Context, token string) (*Slack, error) {
+func New(ctx context.Context, token, botName string) (*Slack, error) {
 	wsurl, id, err := start(token)
 	if err != nil {
 		return nil, err
@@ -50,12 +52,42 @@ func New(ctx context.Context, token string) (*Slack, error) {
 
 	logger := ctx.Value("log").(*logrus.Entry)
 
-	return &Slack{
-		log:   logger,
-		token: token,
-		ws:    ws,
-		id:    id,
-	}, nil
+	s := &Slack{
+		log:     logger,
+		token:   token,
+		ws:      ws,
+		id:      id,
+		botName: botName,
+	}
+
+	if err := s.updateBotDetails(); err != nil {
+		return nil, err
+	}
+
+	s.log.WithField("bot-id", s.BotID).Info("set bot ID")
+
+	return s, nil
+}
+
+func (s *Slack) updateBotDetails() error {
+	members, err := s.UserList()
+	if err != nil {
+		return fmt.Errorf("retrieve list of users: %v", err)
+	}
+
+	found := false
+	for _, m := range members {
+		if m.Name == s.botName {
+			s.BotID = m.ID
+			found = true
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("unable to find bot id")
+	}
+
+	return nil
 }
 
 // ID returns the user id of the Slack connection.
@@ -117,9 +149,14 @@ func (s *Slack) SendToChannel(msg, channel string, attachments ...Attachment) (*
 
 // IM sends an instance essage to a user.
 func (s *Slack) IM(userID, msg string, attachments ...Attachment) (*Message, error) {
+	log := s.log.WithField("slack-action", "im.open")
+	if userID == s.BotID {
+		log.Warn("trying to send to self")
+	}
+
 	ca := CallArgs{"user": userID}
 
-	s.log.WithField("user_id", userID).Info("sending IM")
+	log.WithField("user_id", userID).Info("sending IM")
 
 	resp, err := s.Call("im.open", ca, UnmarshalIMOpen)
 	if err != nil {
@@ -128,7 +165,7 @@ func (s *Slack) IM(userID, msg string, attachments ...Attachment) (*Message, err
 
 	im := resp.(*IM)
 	if !im.OK {
-		s.log.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"user_id": userID,
 			"err":     im.Error}).
 			Error("unable to open im channel")
@@ -162,6 +199,18 @@ func (s *Slack) Upload(filename string, r io.Reader, channels []string) error {
 	}
 
 	return nil
+}
+
+// UserList loads a list of users.
+func (s *Slack) UserList() ([]User, error) {
+	ca := CallArgs{}
+	resp, err := s.Call("users.list", ca, UnmarshalMembers)
+	if err != nil {
+		return nil, err
+	}
+
+	members := resp.([]User)
+	return members, nil
 }
 
 // Leave leaves a channel
@@ -230,8 +279,8 @@ func (s *Slack) Call(endpoint string, args CallArgs, fn UnmarshalFn) (interface{
 	if err != nil {
 		s.log.WithError(err).
 			WithFields(logrus.Fields{
-			"endpoint": endpoint,
-		}).Error("error calling Slack API")
+				"endpoint": endpoint,
+			}).Error("error calling Slack API")
 
 		return nil, err
 	}
@@ -351,8 +400,27 @@ func call2(endpoint string, args CallArgs) ([]byte, error) {
 }
 
 type slackResponse struct {
-	OK   bool `json:"ok,omitempty"`
-	User json.RawMessage
+	OK      bool            `json:"ok,omitempty"`
+	User    json.RawMessage `json:"user,omitempty"`
+	Members json.RawMessage `json:"members,omitempty"`
+}
+
+// UnmarshalMembers unmarshals a slack resposne as members.
+func UnmarshalMembers(b []byte) (interface{}, error) {
+	var members []User
+	var sr slackResponse
+
+	err := json.Unmarshal(b, &sr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(sr.Members, &members)
+	if err != nil {
+		return nil, err
+	}
+
+	return members, nil
 }
 
 // UnmarshalUser unmarshals a slack response as a user.

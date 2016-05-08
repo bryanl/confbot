@@ -43,6 +43,10 @@ func (c *Confbot) Listen() {
 			continue
 		}
 
+		if m.User == s.BotID {
+			continue
+		}
+
 		go func(m *slack.Message) {
 			l := log.WithFields(logrus.Fields{
 				"type": m.Type,
