@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/go-errors/errors"
 
 	"golang.org/x/net/context"
 )
@@ -28,12 +29,12 @@ func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
 
 		id, err := repo.ProjectID(userID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, 1)
 		}
 
 		if id == "" {
 			if _, err := s.IM(userID, helloResp2); err != nil {
-				return err
+				return errors.Wrap(err, 1)
 			}
 		} else {
 			msg = fmt.Sprintf(helloResp3, id)

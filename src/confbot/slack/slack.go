@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/Sirupsen/logrus"
@@ -31,6 +32,8 @@ type Slack struct {
 	ws             *websocket.Conn
 	id             string
 	messageCounter uint64
+
+	mu sync.Mutex
 }
 
 // New creates an instance of Slack given a Slack token.

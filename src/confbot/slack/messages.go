@@ -13,7 +13,8 @@ type OutgoingMessage struct {
 // Message is an auxiliary type to allow us to have a message containing sub messages
 type Message struct {
 	Msg
-	SubMessage *Msg `json:"message,omitempty"`
+	SubMessage *Msg   `json:"message,omitempty"`
+	URL        string `json:"url,omitempty"`
 }
 
 // Msg contains information about a slack message

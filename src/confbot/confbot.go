@@ -67,7 +67,12 @@ func (c *Confbot) Listen() {
 					time.Sleep(5 * time.Second)
 					s.Leave(ch)
 				}
-
+			case "hello":
+				log.Info("successful connected to slack message server")
+			case "reconnect_url":
+				// no op. looks to be some sort of slack experiment: https://api.slack.com/events/reconnect_url
+			case "presence_change", "user_typing":
+				// no op. these aren't useful.
 			default:
 				l := log.WithFields(logrus.Fields{
 					"type": m.Type,

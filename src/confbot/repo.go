@@ -171,8 +171,21 @@ func (rr *redisRepo) ProjectID(userID string) (string, error) {
 	defer rr.pool.Put(conn)
 
 	k := rr.key("projects")
+
+	i, err := conn.Cmd("EXISTS", k).Int()
+	if err != nil {
+		return "", err
+	}
+
+	if i == 0 {
+		return "", nil
+	}
+
 	id, err := conn.Cmd("HGET", k, userID).Str()
 	if err != nil {
+		rr.log.WithField("userID", userID).
+			WithError(err).
+			Error("retrieve project id by user id")
 		return "", err
 	}
 
