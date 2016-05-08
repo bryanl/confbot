@@ -69,6 +69,8 @@ func (c *Confbot) Listen() {
 				}
 			case "hello":
 				log.Info("successful connected to slack message server")
+			case "message":
+
 			case "reconnect_url":
 				// no op. looks to be some sort of slack experiment: https://api.slack.com/events/reconnect_url
 			case "presence_change", "user_typing":

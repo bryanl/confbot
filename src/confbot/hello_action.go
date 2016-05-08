@@ -22,7 +22,7 @@ func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
 				Error("unable to lookup user")
 		}
 
-		msg := fmt.Sprintf(helloResp1, user.Name, "confbot")
+		msg := fmt.Sprintf(helloResponse, user.Name, "confbot")
 		if _, err := s.IM(userID, msg); err != nil {
 			return err
 		}
@@ -33,12 +33,12 @@ func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
 		}
 
 		if id == "" {
-			if _, err := s.IM(userID, helloResp2); err != nil {
+			if _, err := s.IM(user.ID, projecIsNotDefined); err != nil {
 				return errors.Wrap(err, 1)
 			}
 		} else {
-			msg = fmt.Sprintf(helloResp3, id)
-			if _, err := s.IM(userID, msg); err != nil {
+			msg = fmt.Sprintf(projectIsDefined, id)
+			if _, err := s.IM(user.ID, msg); err != nil {
 				return err
 			}
 		}
@@ -49,9 +49,9 @@ func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
 }
 
 var (
-	helloResp1 = "Hello, *%s*, I'm %s, and I will be working with you during the OSCON AppOps tutorial. " +
+	helloResponse = "Hello, *%s*, I'm %s, and I will be working with you during the OSCON AppOps tutorial. " +
 		"I can help you create your enviroment, and offer help when I can. To get started, you will have to issue me a command."
 
-	helloResp2 = "It doesn't look like you have a project defined. To start a new project, tell me to `./boot shell`"
-	helloResp3 = "It looks like you already have a project (_%s_) defined. If you require help or want to know what to do next, ask me for help with `./help`"
+	projecIsNotDefined = "It doesn't look like you have a project defined. To start a new project, tell me to `./boot shell`"
+	projectIsDefined   = "It looks like you already have a project (_%s_) defined. If you require help or want to know what to do next, ask me for help with `./help`"
 )

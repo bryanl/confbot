@@ -164,6 +164,13 @@ func (rr *redisRepo) RegisterProject(id, userID string) error {
 }
 
 func (rr *redisRepo) ProjectID(userID string) (string, error) {
+	log := rr.log.WithFields(logrus.Fields{
+		"repo-action": "ProjectID",
+		"userID":      userID,
+	})
+
+	log.Info("retrieve project ID")
+
 	conn, err := rr.pool.Get()
 	if err != nil {
 		return "", err
@@ -174,6 +181,10 @@ func (rr *redisRepo) ProjectID(userID string) (string, error) {
 
 	i, err := conn.Cmd("EXISTS", k).Int()
 	if err != nil {
+		log.WithError(err).
+			WithFields(logrus.Fields{
+			"key": k,
+		}).Error("redis EXISTS")
 		return "", err
 	}
 
@@ -183,10 +194,7 @@ func (rr *redisRepo) ProjectID(userID string) (string, error) {
 
 	id, err := conn.Cmd("HGET", k, userID).Str()
 	if err != nil {
-		rr.log.WithField("userID", userID).
-			WithError(err).
-			Error("retrieve project id by user id")
-		return "", err
+		return "", nil
 	}
 
 	return id, nil
