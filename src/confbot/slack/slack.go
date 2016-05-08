@@ -187,9 +187,9 @@ func (s *Slack) UserInfo(userID string) (*User, error) {
 		return nil, err
 	}
 
-	user := resp.(User)
+	user := resp.(*User)
 
-	return &user, nil
+	return user, nil
 }
 
 // AddReaction adds a reaction to a message
@@ -268,6 +268,7 @@ func call(endpoint string, args CallArgs, fn UnmarshalFn) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return fn(body)
 }
 
@@ -346,10 +347,22 @@ func call2(endpoint string, args CallArgs) ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
+type slackResponse struct {
+	OK   bool `json:"ok,omitempty"`
+	User json.RawMessage
+}
+
 // UnmarshalUser unmarshals a slack response as a user.
 func UnmarshalUser(b []byte) (interface{}, error) {
 	var u User
-	err := json.Unmarshal(b, &u)
+	var sr slackResponse
+
+	err := json.Unmarshal(b, &sr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(sr.User, &u)
 	if err != nil {
 		return nil, err
 	}
