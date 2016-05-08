@@ -86,7 +86,7 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 			return err
 		}
 
-		_ = s.AddReaction(msg.Timestamp, msg.Channel, reactionNew)
+		_ = s.AddReaction(msg.Timestamp, msg.Channel(), reactionNew)
 
 		var reply slack.OutgoingMessage
 		sc, err := sb.Boot()
@@ -97,8 +97,8 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 				return err
 			}
 		} else {
-			_ = s.RemoveReaction(msg.Timestamp, msg.Channel, reactionNew)
-			_ = s.AddReaction(msg.Timestamp, msg.Channel, reactionUp)
+			_ = s.RemoveReaction(msg.Timestamp, msg.Channel(), reactionNew)
+			_ = s.AddReaction(msg.Timestamp, msg.Channel(), reactionUp)
 		}
 
 		if err := s.Send(&reply); err != nil {
@@ -110,7 +110,7 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 		}
 
 		r := bytes.NewReader(sc.KeyPair.private)
-		if err := s.Upload("id_rsa", r, []string{msg.Channel}); err != nil {
+		if err := s.Upload("id_rsa", r, []string{msg.Channel()}); err != nil {
 			return err
 		}
 

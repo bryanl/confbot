@@ -65,7 +65,7 @@ func (s *Slack) Receive() (*Message, error) {
 	var in string
 	err := websocket.Message.Receive(s.ws, &in)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("websocket receive: %v", err)
 	}
 
 	s.log.WithField("content", in).Debug("incoming message")
@@ -73,7 +73,8 @@ func (s *Slack) Receive() (*Message, error) {
 	var m Message
 	err = json.Unmarshal([]byte(in), &m)
 	if err != nil {
-		return nil, err
+		s.log.WithField("incoming-message", in).Warn("unknown message type")
+		return nil, fmt.Errorf("json unmarshal: %v", err)
 	}
 
 	return &m, nil

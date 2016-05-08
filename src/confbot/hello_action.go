@@ -18,7 +18,7 @@ func helloWorldAction(ctx context.Context, m *slack.Message, s *slack.Slack) err
 	}
 
 	reply := &slack.OutgoingMessage{
-		Channel: m.Channel,
+		Channel: m.Channel(),
 		Type:    "message",
 		Text:    fmt.Sprintf("Hello %s", user.Profile.FirstName),
 	}

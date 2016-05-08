@@ -1,5 +1,7 @@
 package slack
 
+import "encoding/json"
+
 // OutgoingMessage is used for the realtime API, and seems incomplete.
 type OutgoingMessage struct {
 	ID      uint64 `json:"id"`
@@ -17,15 +19,15 @@ type Message struct {
 // Msg contains information about a slack message
 type Msg struct {
 	// Basic Message
-	Type        string       `json:"type,omitempty"`
-	Channel     string       `json:"channel,omitempty"`
-	User        string       `json:"user,omitempty"`
-	Text        string       `json:"text,omitempty"`
-	Timestamp   string       `json:"ts,omitempty"`
-	IsStarred   bool         `json:"is_starred,omitempty"`
-	PinnedTo    []string     `json:"pinned_to, omitempty"`
-	Attachments []Attachment `json:"attachments,omitempty"`
-	Edited      *Edited      `json:"edited,omitempty"`
+	Type        string          `json:"type,omitempty"`
+	RawChannel  json.RawMessage `json:"channel,omitempty"`
+	User        string          `json:"user,omitempty"`
+	Text        string          `json:"text,omitempty"`
+	Timestamp   string          `json:"ts,omitempty"`
+	IsStarred   bool            `json:"is_starred,omitempty"`
+	PinnedTo    []string        `json:"pinned_to, omitempty"`
+	Attachments []Attachment    `json:"attachments,omitempty"`
+	Edited      *Edited         `json:"edited,omitempty"`
 
 	// Message Subtypes
 	SubType string `json:"subtype,omitempty"`
@@ -71,6 +73,33 @@ type Msg struct {
 	// https://api.slack.com/rtm
 	ReplyTo int    `json:"reply_to,omitempty"`
 	Team    string `json:"team,omitempty"`
+}
+
+// Channel returns the channel or group for a message.
+func (c *Message) Channel() string {
+	if c.RawChannel == nil {
+		return ""
+	}
+
+	// is it a group?
+	var g Group
+	if err := json.Unmarshal(c.RawChannel, &g); err == nil {
+		return g.Name
+	}
+
+	return string(c.RawChannel)
+}
+
+// Group is group info.
+type Group struct {
+	ID         string `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
+	IsGroup    bool   `json:"is_group,omitempty"`
+	Created    int    `json:"created,omitempty"`
+	Creator    string `json:"creator,omitempty"`
+	IsArchived bool   `json:"is_archived,omitempty"`
+	IsMPIM     bool   `json:"is_mpim,omitempty"`
+	IsOpen     bool   `json:"is_open,omitempty"`
 }
 
 // Edited indicates that a message has been edited.

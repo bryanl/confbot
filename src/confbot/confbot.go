@@ -55,11 +55,19 @@ func (c *Confbot) Listen() {
 				}
 			}
 
-			log.WithFields(logrus.Fields{
-				"type":    m.Type,
-				"channel": m.Channel,
-				"user":    m.User,
-			}).Info("unhandled message")
+			l := log.WithFields(logrus.Fields{
+				"type": m.Type,
+			})
+
+			if u := m.User; u != "" {
+				l = l.WithField("user", u)
+			}
+
+			if ch := m.Channel(); ch != "" {
+				l = l.WithField("channel", ch)
+			}
+
+			l.Info("unhandled message")
 		}(m)
 	}
 }

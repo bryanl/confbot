@@ -48,7 +48,7 @@ func CreateProvisionAction(ctx context.Context, repo Repo) ActionFn {
 		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": userID})
 		log.Info("creating provisioner")
 
-		p := newProvision(ctx, userID, projectID, m.Channel, repo, s)
+		p := newProvision(ctx, userID, projectID, m.Channel(), repo, s)
 		p.run()
 
 		return nil
