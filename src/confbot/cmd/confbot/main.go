@@ -64,12 +64,12 @@ func main() {
 
 	cb := confbot.New(ctx, s, repo)
 
-	cb.AddTextAction("hello", confbot.CreateHelloAction(ctx, repo))
-	cb.AddTextAction("./boot shell", confbot.CreateBootShellAction(ctx, spec.DigitalOceanToken, repo))
-	cb.AddTextAction("./delete", confbot.CreateDeleteAction(ctx, spec.DigitalOceanToken, repo))
-	cb.AddTextAction("./reset", confbot.CreateResetAction(ctx, repo))
-	cb.AddTextAction("./provision", confbot.CreateProvisionAction(ctx, repo))
-	cb.AddTextAction("./settings", confbot.CreateSettingsAction(repo))
+	cb.AddTextAction("^hello$", confbot.CreateHelloAction(ctx, repo))
+	cb.AddTextAction("^./boot shell$", confbot.CreateBootShellAction(ctx, spec.DigitalOceanToken, repo))
+	cb.AddTextAction("^./delete$", confbot.CreateDeleteAction(ctx, spec.DigitalOceanToken, repo))
+	cb.AddTextAction("^./reset$", confbot.CreateResetAction(ctx, repo))
+	cb.AddTextAction("^./provision$", confbot.CreateProvisionAction(ctx, repo))
+	cb.AddTextAction("^./settings$", confbot.CreateSettingsAction(repo))
 	go cb.Listen()
 
 	a := api.New(ctx, repo, s)

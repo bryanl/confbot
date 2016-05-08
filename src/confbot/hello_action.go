@@ -13,14 +13,14 @@ import (
 // CreateHelloAction creates a hello action.
 func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
 	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
-		userID := m.User
-		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": userID})
+		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": m.User})
 
 		user, err := s.UserInfo(m.User)
 		if err != nil {
 			log.WithError(err).
 				Error("unable to lookup user")
 		}
+		userID := user.ID
 
 		msg := fmt.Sprintf(helloResponse, user.Name, "confbot")
 		if _, err := s.IM(userID, msg); err != nil {
@@ -33,12 +33,12 @@ func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
 		}
 
 		if id == "" {
-			if _, err := s.IM(user.ID, projecIsNotDefined); err != nil {
+			if _, err := s.IM(userID, projecIsNotDefined); err != nil {
 				return errors.Wrap(err, 1)
 			}
 		} else {
 			msg = fmt.Sprintf(projectIsDefined, id)
-			if _, err := s.IM(user.ID, msg); err != nil {
+			if _, err := s.IM(userID, msg); err != nil {
 				return err
 			}
 		}

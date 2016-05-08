@@ -44,6 +44,11 @@ func (c *Confbot) Listen() {
 		}
 
 		go func(m *slack.Message) {
+			l := log.WithFields(logrus.Fields{
+				"type": m.Type,
+				"raw":  raw,
+			})
+
 			for _, ta := range c.textActions {
 				if ta.re.Match([]byte(m.Text)) {
 					err := ta.fn(c.ctx, m, s)
@@ -69,18 +74,11 @@ func (c *Confbot) Listen() {
 				}
 			case "hello":
 				log.Info("successful connected to slack message server")
-			case "message":
-
 			case "reconnect_url":
 				// no op. looks to be some sort of slack experiment: https://api.slack.com/events/reconnect_url
 			case "presence_change", "user_typing":
 				// no op. these aren't useful.
 			default:
-				l := log.WithFields(logrus.Fields{
-					"type": m.Type,
-					"raw":  raw,
-				})
-
 				if u := m.User; u != "" {
 					l = l.WithField("user", u)
 				}
