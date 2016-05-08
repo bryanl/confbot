@@ -35,7 +35,7 @@ func (c *Confbot) Listen() {
 	s := c.s
 
 	for {
-		m, err := s.Receive()
+		m, raw, err := s.Receive()
 		if err != nil {
 			log.WithError(err).Error("error receiving message from slack")
 			continue
@@ -57,6 +57,7 @@ func (c *Confbot) Listen() {
 
 			l := log.WithFields(logrus.Fields{
 				"type": m.Type,
+				"raw":  raw,
 			})
 
 			if u := m.User; u != "" {

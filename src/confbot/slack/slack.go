@@ -61,11 +61,11 @@ func (s *Slack) ID() string {
 }
 
 // Receive blocks until it receives a message from the Slack API.
-func (s *Slack) Receive() (*Message, error) {
+func (s *Slack) Receive() (*Message, string, error) {
 	var in string
 	err := websocket.Message.Receive(s.ws, &in)
 	if err != nil {
-		return nil, fmt.Errorf("websocket receive: %v", err)
+		return nil, in, fmt.Errorf("websocket receive: %v", err)
 	}
 
 	s.log.WithField("content", in).Debug("incoming message")
@@ -74,10 +74,10 @@ func (s *Slack) Receive() (*Message, error) {
 	err = json.Unmarshal([]byte(in), &m)
 	if err != nil {
 		s.log.WithField("incoming-message", in).Warn("unknown message type")
-		return nil, fmt.Errorf("json unmarshal: %v", err)
+		return nil, in, fmt.Errorf("json unmarshal: %v", err)
 	}
 
-	return &m, nil
+	return &m, in, nil
 }
 
 // Send sends a message to the Slack API.
