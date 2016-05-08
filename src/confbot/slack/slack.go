@@ -148,8 +148,35 @@ func (s *Slack) Upload(filename string, r io.Reader, channels []string) error {
 		"channels": strings.Join(channels, ","),
 	}
 
-	_, err := s.Call("files.upload", ca, UnmarshalMap)
-	return err
+	resp, err := s.Call("files.upload", ca, UnmarshalMap)
+	if err != nil {
+		return err
+	}
+
+	m := resp.(map[string]interface{})
+	if e := m["error"]; e != "" {
+		return fmt.Errorf("slack api error: %s", e)
+	}
+
+	return nil
+}
+
+// Leave leaves a channel
+func (s *Slack) Leave(channel string) error {
+	s.log.WithField("channel", channel).Info("channels.leave")
+
+	ca := CallArgs{"channel": channel}
+	resp, err := s.Call("channels.leave", ca, UnmarshalMap)
+	if err != nil {
+		return err
+	}
+
+	m := resp.(map[string]interface{})
+	if !m["ok"].(bool) {
+		return fmt.Errorf("slack api error: %s", m["error"])
+	}
+
+	return nil
 }
 
 // UserInfo returns infor about a user.

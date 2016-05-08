@@ -3,6 +3,7 @@ package confbot
 import (
 	"confbot/slack"
 	"regexp"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -15,7 +16,8 @@ type Confbot struct {
 	s    *slack.Slack
 	ctx  context.Context
 
-	textActions []textAction
+	textActions   []textAction
+	validChannels []string
 }
 
 // New creates an instance of Confbot.
@@ -55,20 +57,34 @@ func (c *Confbot) Listen() {
 				}
 			}
 
-			l := log.WithFields(logrus.Fields{
-				"type": m.Type,
-				"raw":  raw,
-			})
+			switch m.Type {
+			case "group_joined":
+				ch := m.Channel()
+				if !any(c.validChannels, func(s string) bool {
+					return s == ch
+				}) {
+					s.SendToChannel("*i'm not authorized to be in this channel*", ch)
+					time.Sleep(5 * time.Second)
+					s.Leave(ch)
+				}
 
-			if u := m.User; u != "" {
-				l = l.WithField("user", u)
+			default:
+				l := log.WithFields(logrus.Fields{
+					"type": m.Type,
+					"raw":  raw,
+				})
+
+				if u := m.User; u != "" {
+					l = l.WithField("user", u)
+				}
+
+				if ch := m.Channel(); ch != "" {
+					l = l.WithField("channel", ch)
+				}
+
+				l.Info("unhandled message")
 			}
 
-			if ch := m.Channel(); ch != "" {
-				l = l.WithField("channel", ch)
-			}
-
-			l.Info("unhandled message")
 		}(m)
 	}
 }
@@ -99,4 +115,13 @@ func (c *Confbot) AddTextAction(trigger string, fn ActionFn) error {
 
 func logFromContext(ctx context.Context) *logrus.Entry {
 	return ctx.Value("log").(*logrus.Entry)
+}
+
+func any(vs []string, f func(string) bool) bool {
+	for _, v := range vs {
+		if f(v) {
+			return true
+		}
+	}
+	return false
 }
