@@ -13,7 +13,6 @@ import (
 
 	"confbot/api"
 	"confbot/logging"
-	cbslack "confbot/slack"
 )
 
 const (
@@ -55,11 +54,6 @@ func main() {
 	s := slack.New(spec.SlackToken)
 	s.SetDebug(true)
 
-	cbs, err := cbslack.New(ctx, spec.SlackToken, spec.BotName)
-	if err != nil {
-		rootLog.WithError(err).Fatal("unable to connect to slack")
-	}
-
 	log.Info("application started")
 
 	repo, err := confbot.NewRepo(ctx, spec.RedisURL, spec.Env)
@@ -67,7 +61,7 @@ func main() {
 		rootLog.WithError(err).Fatalf("unable to create repo")
 	}
 
-	cb := confbot.New(ctx, cbs, s, repo)
+	cb := confbot.New(ctx, s, repo)
 
 	cb.AddTextAction("^hello$", confbot.CreateHelloAction(ctx, repo))
 	cb.AddTextAction("^./boot shell$", confbot.CreateBootShellAction(ctx, spec.DigitalOceanToken, repo))
@@ -77,7 +71,7 @@ func main() {
 	cb.AddTextAction("^./settings$", confbot.CreateSettingsAction(repo))
 	go cb.Listen()
 
-	a := api.New(ctx, repo, cbs)
+	a := api.New(ctx, repo)
 	http.Handle("/", a.Mux)
 
 	log.WithField("addr", spec.HTTPAddr).Info("created http server")

@@ -1,7 +1,6 @@
 package confbot
 
 import (
-	cbslack "confbot/slack"
 	"fmt"
 	"regexp"
 
@@ -14,7 +13,6 @@ import (
 // Confbot is a conference workshop bot.
 type Confbot struct {
 	repo   Repo
-	cbs    *cbslack.Slack
 	client *slack.Client
 	ctx    context.Context
 
@@ -23,10 +21,9 @@ type Confbot struct {
 }
 
 // New creates an instance of Confbot.
-func New(ctx context.Context, cbs *cbslack.Slack, s *slack.Client, repo Repo) *Confbot {
+func New(ctx context.Context, s *slack.Client, repo Repo) *Confbot {
 	cb := &Confbot{
 		repo:   repo,
-		cbs:    cbs,
 		ctx:    ctx,
 		client: s,
 	}

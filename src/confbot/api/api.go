@@ -2,11 +2,11 @@ package api
 
 import (
 	"confbot"
-	"confbot/slack"
 	"fmt"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/nlopes/slack"
 
 	"golang.org/x/net/context"
 
@@ -21,19 +21,19 @@ type requestWebhook struct {
 
 // API is the confbot API.
 type API struct {
-	Mux  http.Handler
-	repo confbot.Repo
-	s    *slack.Slack
-	log  *logrus.Entry
+	Mux         http.Handler
+	repo        confbot.Repo
+	log         *logrus.Entry
+	slackClient *slack.Client
 }
 
 // New creates an instance of API.
-func New(ctx context.Context, repo confbot.Repo, s *slack.Slack) *API {
+func New(ctx context.Context, repo confbot.Repo, s *slack.Client) *API {
 	log := ctx.Value("log").(*logrus.Entry)
 	a := &API{
-		repo: repo,
-		s:    s,
-		log:  log,
+		repo:        repo,
+		log:         log,
+		slackClient: s,
 	}
 
 	e := echo.New()
@@ -67,11 +67,14 @@ func (a *API) webhook(c *echo.Context) error {
 		return c.NoContent(http.StatusNotFound)
 	}
 
-	if _, err := a.s.IM(userID, fmt.Sprintf("received webhook of type _%s_", r.Type)); err != nil {
-		a.log.WithError(err).
-			WithField("project_id", r.ProjectID).
-			Error("could not send message")
+	_, _, channelID, err := a.slackClient.OpenIMChannel(userID)
+	if err != nil {
+		return err
 	}
+
+	params := slack.PostMessageParameters{}
+	msg := fmt.Sprintf("received webhook of type _%s_", r.Type)
+	a.slackClient.PostMessage(channelID, msg, params)
 
 	return c.NoContent(http.StatusNoContent)
 }
