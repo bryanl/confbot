@@ -201,21 +201,21 @@ func (s *Slack) Upload(filename string, r io.Reader, channels []string) error {
 	return nil
 }
 
-func (s *Slack) IMChannel(userID string) (string, error) {
-	ca := CallArgs{}
-	resp, err := s.Call("im.list", ca, UnmarshalIMs)
-	if err != nil {
-		return nil, err
-	}
+// func (s *Slack) IMChannel(userID string) (string, error) {
+// 	ca := CallArgs{}
+// 	resp, err := s.Call("im.list", ca, UnmarshalIMs)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	ims := resp.([]IM)
-	for _, im := range ims {
+// 	ims := resp.([]IM)
+// 	for _, im := range ims {
 
-	}
+// 	}
 
-	return members, nil
+// 	return members, nil
 
-}
+// }
 
 // UserList loads a list of users.
 func (s *Slack) UserList() ([]User, error) {
@@ -395,7 +395,7 @@ func call2(endpoint string, args CallArgs) ([]byte, error) {
 		return nil, err
 	}
 
-	fmt.Printf("sending body:\n %s\n", body.String())
+	// fmt.Printf("sending body:\n %s\n", body.String())
 
 	req, err := http.NewRequest("POST", u.String(), body)
 	if err != nil {

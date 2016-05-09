@@ -1,9 +1,8 @@
 package confbot
 
 import (
-	"confbot/slack"
-
 	"github.com/Sirupsen/logrus"
+	"github.com/nlopes/slack"
 
 	"golang.org/x/net/context"
 )
@@ -14,11 +13,11 @@ type provision struct {
 	repo      Repo
 	userID    string
 	projectID string
-	slack     *slack.Slack
+	slack     *slack.Client
 	channel   string
 }
 
-func newProvision(ctx context.Context, userID, projectID, channel string, repo Repo, s *slack.Slack) *provision {
+func newProvision(ctx context.Context, userID, projectID, channel string, repo Repo, s *slack.Client) *provision {
 	return &provision{
 		log:       logFromContext(ctx),
 		repo:      repo,
@@ -38,9 +37,14 @@ func (p *provision) run() {
 
 // CreateProvisionAction creates a provision action.
 func CreateProvisionAction(ctx context.Context, repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
+	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
 		userID := m.User
 		projectID, err := repo.ProjectID(userID)
+		if err != nil {
+			return err
+		}
+
+		_, _, channelID, err := s.OpenIMChannel(m.User)
 		if err != nil {
 			return err
 		}
@@ -48,7 +52,7 @@ func CreateProvisionAction(ctx context.Context, repo Repo) ActionFn {
 		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": userID})
 		log.Info("creating provisioner")
 
-		p := newProvision(ctx, userID, projectID, m.Channel(), repo, s)
+		p := newProvision(ctx, userID, projectID, channelID, repo, s)
 		p.run()
 
 		return nil

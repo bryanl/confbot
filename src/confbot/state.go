@@ -4,17 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/nlopes/slack"
 )
 
 type stateFn func(*provision) stateFn
 
 func initState(p *provision) stateFn {
 	p.log.WithField("state", "initState").Info("running initState")
-	if _, err := p.slack.IM(p.userID, "*--- provisioning process started ---*"); err != nil {
+	params := slack.NewPostMessageParameters()
+	if _, _, err := p.slack.PostMessage(p.channel, "*--- provisioning process started ---*", params); err != nil {
 		return errorStateGen(err)
 	}
 	return infraState
@@ -24,7 +25,8 @@ func infraState(p *provision) stateFn {
 	log := p.log.WithField("state", "infraState")
 	sshClient := NewSSHClient(p.ctx, p.projectID, p.repo)
 
-	if _, err := p.slack.IM(p.userID, "*starting infrastructure provisioning*"); err != nil {
+	params := slack.NewPostMessageParameters()
+	if _, _, err := p.slack.PostMessage(p.channel, "*starting infrastructure provisioning*", params); err != nil {
 		return errorStateGen(err)
 	}
 	out, err := sshClient.Execute("shell", "cd /home/workshop/infra && ./setup.sh")
@@ -33,13 +35,11 @@ func infraState(p *provision) stateFn {
 		return errorStateGen(err)
 	}
 
-	r := strings.NewReader(out)
-	if err := p.slack.Upload("infra-provision.txt", r, []string{p.channel}); err != nil {
-		log.WithError(err).Error("upload infra-provision.txt")
+	if err := uploadOutput(p, log, "infra-provision.txt", out); err != nil {
 		return errorStateGen(err)
 	}
 
-	if _, err := p.slack.IM(p.userID, "*infrastructure provisioned*"); err != nil {
+	if _, _, err := p.slack.PostMessage(p.channel, "*infrastructure provisioned*", params); err != nil {
 		return errorStateGen(err)
 	}
 
@@ -50,7 +50,8 @@ func certsState(p *provision) stateFn {
 	log := p.log.WithField("state", "certState")
 	sshClient := NewSSHClient(p.ctx, p.projectID, p.repo)
 
-	if _, err := p.slack.IM(p.userID, "*update root certificates*"); err != nil {
+	params := slack.NewPostMessageParameters()
+	if _, _, err := p.slack.PostMessage(p.channel, "*update root certificates*", params); err != nil {
 		return errorStateGen(err)
 	}
 
@@ -82,7 +83,8 @@ func ansibleState(p *provision) stateFn {
 	log := p.log.WithField("state", "ansibleState")
 	sshClient := NewSSHClient(p.ctx, p.projectID, p.repo)
 
-	if _, err := p.slack.IM(p.userID, "*starting ansible -- this may take a few minutes*"); err != nil {
+	params := slack.NewPostMessageParameters()
+	if _, _, err := p.slack.PostMessage(p.channel, "*starting ansible -- this may take a few minutes*", params); err != nil {
 		return errorStateGen(err)
 	}
 
@@ -92,13 +94,11 @@ func ansibleState(p *provision) stateFn {
 		return errorStateGen(err)
 	}
 
-	r := strings.NewReader(out)
-	if err := p.slack.Upload("ansible.txt", r, []string{p.channel}); err != nil {
-		log.WithError(err).Error("upload ansible.txt")
+	if err := uploadOutput(p, log, "ansible.txt", out); err != nil {
 		return errorStateGen(err)
 	}
 
-	if _, err := p.slack.IM(p.userID, "*ansible complete*"); err != nil {
+	if _, _, err := p.slack.PostMessage(p.channel, "*ansible complete*", params); err != nil {
 		return errorStateGen(err)
 	}
 
@@ -109,7 +109,8 @@ func esState(p *provision) stateFn {
 	log := p.log.WithField("state", "esState")
 	sshClient := NewSSHClient(p.ctx, p.projectID, p.repo)
 
-	if _, err := p.slack.IM(p.userID, "*waiting for elasticsearch to boot*"); err != nil {
+	params := slack.NewPostMessageParameters()
+	if _, _, err := p.slack.PostMessage(p.channel, "*waiting for elasticsearch to boot*", params); err != nil {
 		return errorStateGen(err)
 	}
 
@@ -132,11 +133,11 @@ func esState(p *provision) stateFn {
 		c++
 	}
 
-	if _, err := p.slack.IM(p.userID, "*elasticsearch is up and listening*"); err != nil {
+	if _, _, err := p.slack.PostMessage(p.channel, "*elasticsearch is up and listening*", params); err != nil {
 		return errorStateGen(err)
 	}
 
-	if _, err := p.slack.IM(p.userID, "*uploading elasticsearch templates*"); err != nil {
+	if _, _, err := p.slack.PostMessage(p.channel, "*uploading elasticsearch templates*", params); err != nil {
 		return errorStateGen(err)
 	}
 
@@ -146,13 +147,11 @@ func esState(p *provision) stateFn {
 		return errorStateGen(err)
 	}
 
-	r := strings.NewReader(out)
-	if err := p.slack.Upload("es.txt", r, []string{p.channel}); err != nil {
-		log.WithError(err).Error("upload es.txt")
+	if err := uploadOutput(p, log, "es.txt", out); err != nil {
 		return errorStateGen(err)
 	}
 
-	if _, err := p.slack.IM(p.userID, "*templates have been uploaded*"); err != nil {
+	if _, _, err := p.slack.PostMessage(p.channel, "*templates have been uploaded*", params); err != nil {
 		return errorStateGen(err)
 	}
 
@@ -161,8 +160,9 @@ func esState(p *provision) stateFn {
 
 func errorStateGen(err error) stateFn {
 	return func(p *provision) stateFn {
+		params := slack.NewPostMessageParameters()
 		p.log.WithField("state", "errorState").WithError(err).Error("provision failed")
-		_, _ = p.slack.IM(p.userID, "*--- provisioning process failed ---*")
+		_, _, _ = p.slack.PostMessage(p.channel, "*--- provisioning process failed ---*", params)
 		return nil
 	}
 }
@@ -170,16 +170,19 @@ func errorStateGen(err error) stateFn {
 func completeState(p *provision) stateFn {
 	log := p.log.WithField("state", "completeState")
 	log.Info("provision complete")
-	_, _ = p.slack.IM(p.userID, "*--- provisioning process completed ---*")
+	params := slack.NewPostMessageParameters()
+	_, _, _ = p.slack.PostMessage(p.channel, "*--- provisioning process completed ---*", params)
 	return nil
 }
 
 func uploadOutput(p *provision, log *logrus.Entry, name, out string) error {
-	r := strings.NewReader(out)
-	if err := p.slack.Upload(name, r, []string{p.channel}); err != nil {
-		log.WithError(err).
-			WithField("file-name", name).
-			Errorf("provision upload")
+	uploadParams := slack.FileUploadParameters{
+		Filename: name,
+		Content:  out,
+	}
+
+	if _, err := p.slack.UploadFile(uploadParams); err != nil {
+		log.WithError(err).WithField("filename", name).Error("upload failed")
 		return err
 	}
 

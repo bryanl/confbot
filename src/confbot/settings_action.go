@@ -1,26 +1,38 @@
 package confbot
 
 import (
-	"confbot/slack"
 	"fmt"
+
+	"github.com/nlopes/slack"
 
 	"golang.org/x/net/context"
 )
 
 // CreateSettingsAction return a fuction that lists some settings.
 func CreateSettingsAction(repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
+	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
 		userID := m.User
 		id, err := repo.ProjectID(userID)
 		if err != nil {
 			return err
 		}
 
-		attachmennt := slack.Attachment{
-			Fields: createSettings(id),
+		_, _, channelID, err := s.OpenIMChannel(m.User)
+		if err != nil {
+			return err
 		}
 
-		if _, err := s.IM(userID, "Settings", attachmennt); err != nil {
+		params := slack.NewPostMessageParameters()
+
+		attachment := slack.Attachment{
+			Pretext: "some pretext",
+			Text:    "some text",
+			Fields:  createSettings(id),
+		}
+
+		params.Attachments = []slack.Attachment{attachment}
+
+		if _, _, err := s.PostMessage(channelID, "Settings", params); err != nil {
 			return err
 		}
 

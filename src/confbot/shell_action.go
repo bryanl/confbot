@@ -1,10 +1,10 @@
 package confbot
 
 import (
-	"confbot/slack"
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/nlopes/slack"
 	"golang.org/x/net/context"
 )
 
@@ -18,12 +18,23 @@ const (
 func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) ActionFn {
 	log := logFromContext(ctx)
 
-	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
+	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
+
+		_, _, channelID, err := s.OpenIMChannel(m.User)
+		if err != nil {
+			return err
+		}
+
 		id := projectID()
 		sb := NewShellBooter(id, doToken, log)
 
 		userID := m.User
-		err := repo.RegisterProject(id, userID)
+		if err := repo.RegisterProject(id, userID); err != nil {
+			params := slack.PostMessageParameters{}
+			msg := fmt.Sprintf("unknown error: %v", err)
+			s.PostMessage(channelID, msg, params)
+
+		}
 
 		log.WithFields(logrus.Fields{
 			"user-id":    userID,
@@ -33,42 +44,36 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 		if err != nil {
 			switch err.(type) {
 			case *ProjectExistsErr:
-				if _, sErr := s.IM(userID, fmt.Sprintf("unable to boot shell: %v", err)); sErr != nil {
-					return sErr
-				}
+				params := slack.PostMessageParameters{}
 
 				id, err = repo.ProjectID(userID)
 				if err != nil {
 					return err
 				}
 
-				_, _ = s.IM(userID, fmt.Sprintf("You already have an existing shell at *%s*", id))
+				params = slack.PostMessageParameters{}
+				msg := fmt.Sprintf("You already have an existing shell at *%s*", id)
+				s.PostMessage(channelID, msg, params)
 
 			default:
-				if _, sErr := s.IM(userID, fmt.Sprintf("unknown error: %v", err)); sErr != nil {
-					return sErr
-				}
+				params := slack.PostMessageParameters{}
+				msg := fmt.Sprintf("unknown error: %v", err)
+				s.PostMessage(channelID, msg, params)
 			}
 			return err
 		}
 
 		txt := fmt.Sprintf(shellResp1, id, dropletDomain)
-		if _, err := s.IM(userID, txt); err != nil {
-			return err
-		}
+		params := slack.PostMessageParameters{}
+		s.PostMessage(channelID, txt, params)
 
-		var reply slack.OutgoingMessage
 		sc, err := sb.Boot()
 		if err != nil {
 			log.WithError(err).Error("couldn't boot shell")
 			msg := fmt.Sprintf("couldn't boot shell: %s", err)
-			if _, err := s.IM(userID, msg); err != nil {
-				return err
-			}
-		}
 
-		if err := s.Send(&reply); err != nil {
-			return err
+			params := slack.PostMessageParameters{}
+			s.PostMessage(channelID, msg, params)
 		}
 
 		if err := repo.SaveKey(id, sc.KeyPair.private); err != nil {

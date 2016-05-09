@@ -1,44 +1,51 @@
 package confbot
 
 import (
-	"confbot/slack"
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/go-errors/errors"
+	"github.com/nlopes/slack"
 
 	"golang.org/x/net/context"
 )
 
 // CreateHelloAction creates a hello action.
 func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
+	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
 		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": m.User})
 
-		user, err := s.UserInfo(m.User)
+		_, _, channelID, err := s.OpenIMChannel(m.User)
 		if err != nil {
-			log.WithError(err).
-				Error("unable to lookup user")
-		}
-		userID := user.ID
-
-		msg := fmt.Sprintf(helloResponse, user.Name, "confbot")
-		if _, err := s.IM(userID, msg); err != nil {
+			log.WithError(err).Error("unable to open im channel")
 			return err
 		}
 
-		id, err := repo.ProjectID(userID)
+		user, err := s.GetUserInfo(m.User)
+		if err != nil {
+			log.WithError(err).Error("unable to fetch user info")
+		}
+
+		msg := fmt.Sprintf(helloResponse, user.Name, "confbot")
+		params := slack.NewPostMessageParameters()
+		if _, _, err := s.PostMessage(channelID, msg, params); err != nil {
+			return err
+		}
+
+		id, err := repo.ProjectID(m.User)
 		if err != nil {
 			return errors.Wrap(err, 1)
 		}
 
 		if id == "" {
-			if _, err := s.IM(userID, projecIsNotDefined); err != nil {
+			params := slack.NewPostMessageParameters()
+			if _, _, err := s.PostMessage(channelID, projecIsNotDefined, params); err != nil {
 				return errors.Wrap(err, 1)
 			}
 		} else {
 			msg = fmt.Sprintf(projectIsDefined, id)
-			if _, err := s.IM(userID, msg); err != nil {
+			params := slack.NewPostMessageParameters()
+			if _, _, err := s.PostMessage(channelID, msg, params); err != nil {
 				return err
 			}
 		}

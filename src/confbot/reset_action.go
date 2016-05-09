@@ -1,22 +1,26 @@
 package confbot
 
 import (
-	"confbot/slack"
-
 	"github.com/Sirupsen/logrus"
-
+	"github.com/nlopes/slack"
 	"golang.org/x/net/context"
 )
 
 // CreateResetAction returns a function that can reset a current user's settings.
 func CreateResetAction(ctx context.Context, repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.Message, s *slack.Slack) error {
+	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
 		userID := m.User
 		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": userID})
 
 		log.Info("reseting project")
 
-		if _, err := s.IM(userID, "resetting your projects"); err != nil {
+		_, _, channelID, err := s.OpenIMChannel(m.User)
+		if err != nil {
+			return err
+		}
+
+		params := slack.PostMessageParameters{}
+		if _, _, err := s.PostMessage(channelID, "resetting your projects", params); err != nil {
 			return err
 		}
 
