@@ -201,6 +201,22 @@ func (s *Slack) Upload(filename string, r io.Reader, channels []string) error {
 	return nil
 }
 
+func (s *Slack) IMChannel(userID string) (string, error) {
+	ca := CallArgs{}
+	resp, err := s.Call("im.list", ca, UnmarshalIMs)
+	if err != nil {
+		return nil, err
+	}
+
+	ims := resp.([]IM)
+	for _, im := range ims {
+
+	}
+
+	return members, nil
+
+}
+
 // UserList loads a list of users.
 func (s *Slack) UserList() ([]User, error) {
 	ca := CallArgs{}
@@ -275,12 +291,13 @@ type CallResults map[string]interface{}
 // Call a Slack web api method.
 func (s *Slack) Call(endpoint string, args CallArgs, fn UnmarshalFn) (interface{}, error) {
 	args["token"] = s.token
+	s.log.WithField("action", endpoint).Info("calling endpoint")
 	resp, err := call(endpoint, args, fn)
 	if err != nil {
 		s.log.WithError(err).
 			WithFields(logrus.Fields{
-				"endpoint": endpoint,
-			}).Error("error calling Slack API")
+			"endpoint": endpoint,
+		}).Error("error calling Slack API")
 
 		return nil, err
 	}
@@ -377,6 +394,8 @@ func call2(endpoint string, args CallArgs) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("sending body:\n %s\n", body.String())
 
 	req, err := http.NewRequest("POST", u.String(), body)
 	if err != nil {

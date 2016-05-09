@@ -1,7 +1,6 @@
 package confbot
 
 import (
-	"bytes"
 	"confbot/slack"
 	"fmt"
 
@@ -53,12 +52,10 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 			return err
 		}
 
-		var msg *slack.Message
-		if msg, err = s.IM(userID, "booting shell for project _"+id+"_"); err != nil {
+		txt := fmt.Sprintf(shellResp1, id, dropletDomain)
+		if _, err := s.IM(userID, txt); err != nil {
 			return err
 		}
-
-		_ = s.AddReaction(msg.Timestamp, msg.Channel(), reactionNew)
 
 		var reply slack.OutgoingMessage
 		sc, err := sb.Boot()
@@ -68,9 +65,6 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 			if _, err := s.IM(userID, msg); err != nil {
 				return err
 			}
-		} else {
-			_ = s.RemoveReaction(msg.Timestamp, msg.Channel(), reactionNew)
-			_ = s.AddReaction(msg.Timestamp, msg.Channel(), reactionUp)
 		}
 
 		if err := s.Send(&reply); err != nil {
@@ -81,15 +75,10 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 			return err
 		}
 
-		r := bytes.NewReader(sc.KeyPair.private)
-		if err := s.Upload("id_rsa", r, []string{msg.Channel()}); err != nil {
-			return err
-		}
-
 		return nil
 	}
 }
 
-var shellResp1 = `I'm currentlying booting a server named "shell.%s.%s". ` +
+var shellResp1 = `I'm currently booting a server named _shell.%s.%s_. ` +
 	`After it has booted, I will use it to provision the rest of your environment. ` +
 	`This process will take a few minutes, and I'll let you know when it is completed.`
