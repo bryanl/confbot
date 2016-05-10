@@ -25,6 +25,7 @@ type API struct {
 	repo        confbot.Repo
 	log         *logrus.Entry
 	slackClient *slack.Client
+	ctx         context.Context
 }
 
 // New creates an instance of API.
@@ -34,6 +35,7 @@ func New(ctx context.Context, repo confbot.Repo, s *slack.Client) *API {
 		repo:        repo,
 		log:         log,
 		slackClient: s,
+		ctx:         ctx,
 	}
 
 	e := echo.New()
@@ -72,9 +74,28 @@ func (a *API) webhook(c *echo.Context) error {
 		return err
 	}
 
-	params := slack.PostMessageParameters{}
-	msg := fmt.Sprintf("received webhook of type _%s_", r.Type)
-	a.slackClient.PostMessage(channelID, msg, params)
+	log := a.log.WithFields(logrus.Fields{
+		"webhook": r.Type,
+		"user-id": userID})
+
+	switch r.Type {
+	case "install_complete":
+		projectID, err := a.repo.ProjectID(userID)
+		if err != nil {
+			return err
+		}
+
+		log.Info("starting provisioner")
+
+		params := slack.PostMessageParameters{}
+		msg := fmt.Sprintf(
+			"I've booted the shell Droplet for _%s_. Next, I will run the provisioner which will create the full "+
+				"environment. This process will take a few more minutes.", projectID)
+		a.slackClient.PostMessage(channelID, msg, params)
+
+		provisioner := confbot.NewProvision(a.ctx, userID, projectID, channelID, a.repo, a.slackClient)
+		provisioner.Run()
+	}
 
 	return c.NoContent(http.StatusNoContent)
 }

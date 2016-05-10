@@ -72,6 +72,7 @@ func (s *SSHClient) Execute(host, cmd string) (string, error) {
 		Info("running command")
 	err = session.Run(cmd)
 	if err != nil {
+		s.log.WithField("output", buf.String()).WithError(err).Error("ssh client run returned non zero result")
 		return "", fmt.Errorf("%s\n%s", err, buf.String())
 	}
 

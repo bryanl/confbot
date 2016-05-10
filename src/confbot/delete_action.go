@@ -13,13 +13,13 @@ import (
 
 // CreateDeleteAction returns a function that deletes a project.
 func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
+	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client) error {
 		var err error
 		userID := m.User
 
 		log := logFromContext(ctx).WithField("user-id", userID)
 
-		_, _, channelID, err := s.OpenIMChannel(m.User)
+		_, _, channelID, err := slackClient.OpenIMChannel(m.User)
 		if err != nil {
 			return err
 		}
@@ -35,11 +35,11 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 			if err != nil {
 				log.WithError(err).Error("unable to delete project")
 				params = slack.PostMessageParameters{}
-				s.PostMessage(channelID, fmt.Sprintf("unable to delete project _%s_", projectID), params)
+				slackClient.PostMessage(channelID, fmt.Sprintf("unable to delete project _%s_", projectID), params)
 			}
 		}()
 
-		if _, _, err = s.PostMessage(channelID, fmt.Sprintf("Deleting project _%s_ and it's associated resources", projectID), params); err != nil {
+		if _, _, err = slackClient.PostMessage(channelID, fmt.Sprintf("Deleting project _%s_ and it's associated resources", projectID), params); err != nil {
 			return err
 		}
 
@@ -48,14 +48,14 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 		oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
 		client := godo.NewClient(oauthClient)
 
-		if _, _, err = s.PostMessage(channelID, "*... Deleting DNS records*", params); err != nil {
+		if _, _, err = slackClient.PostMessage(channelID, "*... Deleting DNS records*", params); err != nil {
 			return err
 		}
 
 		if err = deleteRecords(client, projectID, dropletDomain); err != nil {
 			return err
 		}
-		if _, _, err = s.PostMessage(channelID, "*... Deleting SSH Keys*", params); err != nil {
+		if _, _, err = slackClient.PostMessage(channelID, "*... Deleting SSH Keys*", params); err != nil {
 			return err
 		}
 
@@ -63,7 +63,7 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 			return err
 		}
 
-		if _, _, err = s.PostMessage(channelID, "*... Deleting Droplets*", params); err != nil {
+		if _, _, err = slackClient.PostMessage(channelID, "*... Deleting Droplets*", params); err != nil {
 			return err
 		}
 
@@ -71,7 +71,7 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 			return err
 		}
 
-		if _, _, err = s.PostMessage(channelID, fmt.Sprintf("*... Resetting project for _%s_ *", m.Name), params); err != nil {
+		if _, _, err = slackClient.PostMessage(channelID, fmt.Sprintf("*... Resetting project for _%s_ *", m.Name), params); err != nil {
 			return err
 		}
 
@@ -80,7 +80,7 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 		}
 
 		params = slack.PostMessageParameters{}
-		if _, _, err = s.PostMessage(channelID, fmt.Sprintf("Project _%s_ has been deleted. Send command `./boot shell` to start a new project.", projectID), params); err != nil {
+		if _, _, err = slackClient.PostMessage(channelID, fmt.Sprintf("Project _%s_ has been deleted. Send command `./boot shell` to start a new project.", projectID), params); err != nil {
 			return err
 		}
 

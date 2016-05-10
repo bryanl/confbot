@@ -18,9 +18,9 @@ const (
 func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) ActionFn {
 	log := logFromContext(ctx)
 
-	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
+	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client) error {
 
-		_, _, channelID, err := s.OpenIMChannel(m.User)
+		_, _, channelID, err := slackClient.OpenIMChannel(m.User)
 		if err != nil {
 			return err
 		}
@@ -32,7 +32,7 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 		if err := repo.RegisterProject(id, userID); err != nil {
 			params := slack.PostMessageParameters{}
 			msg := fmt.Sprintf("unknown error: %v", err)
-			s.PostMessage(channelID, msg, params)
+			slackClient.PostMessage(channelID, msg, params)
 
 		}
 
@@ -53,19 +53,19 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 
 				params = slack.PostMessageParameters{}
 				msg := fmt.Sprintf("You already have an existing shell at *%s*", id)
-				s.PostMessage(channelID, msg, params)
+				slackClient.PostMessage(channelID, msg, params)
 
 			default:
 				params := slack.PostMessageParameters{}
 				msg := fmt.Sprintf("unknown error: %v", err)
-				s.PostMessage(channelID, msg, params)
+				slackClient.PostMessage(channelID, msg, params)
 			}
 			return err
 		}
 
 		txt := fmt.Sprintf(shellResp1, id, dropletDomain)
 		params := slack.PostMessageParameters{}
-		s.PostMessage(channelID, txt, params)
+		slackClient.PostMessage(channelID, txt, params)
 
 		sc, err := sb.Boot()
 		if err != nil {
@@ -73,7 +73,7 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 			msg := fmt.Sprintf("couldn't boot shell: %s", err)
 
 			params := slack.PostMessageParameters{}
-			s.PostMessage(channelID, msg, params)
+			slackClient.PostMessage(channelID, msg, params)
 		}
 
 		if err := repo.SaveKey(id, sc.KeyPair.private); err != nil {

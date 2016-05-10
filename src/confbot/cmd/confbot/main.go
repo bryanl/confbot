@@ -51,8 +51,8 @@ func main() {
 
 	ctx := context.WithValue(context.Background(), "log", log)
 
-	s := slack.New(spec.SlackToken)
-	s.SetDebug(true)
+	slackClient := slack.New(spec.SlackToken)
+	slackClient.SetDebug(true)
 
 	log.Info("application started")
 
@@ -61,7 +61,7 @@ func main() {
 		rootLog.WithError(err).Fatalf("unable to create repo")
 	}
 
-	cb := confbot.New(ctx, s, repo)
+	cb := confbot.New(ctx, slackClient, repo)
 
 	cb.AddTextAction("^hello$", confbot.CreateHelloAction(ctx, repo))
 	cb.AddTextAction("^./boot shell$", confbot.CreateBootShellAction(ctx, spec.DigitalOceanToken, repo))
@@ -71,7 +71,7 @@ func main() {
 	cb.AddTextAction("^./settings$", confbot.CreateSettingsAction(repo))
 	go cb.Listen()
 
-	a := api.New(ctx, repo)
+	a := api.New(ctx, repo, slackClient)
 	http.Handle("/", a.Mux)
 
 	log.WithField("addr", spec.HTTPAddr).Info("created http server")

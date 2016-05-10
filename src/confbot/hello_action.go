@@ -12,23 +12,23 @@ import (
 
 // CreateHelloAction creates a hello action.
 func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
+	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client) error {
 		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": m.User})
 
-		_, _, channelID, err := s.OpenIMChannel(m.User)
+		_, _, channelID, err := slackClient.OpenIMChannel(m.User)
 		if err != nil {
 			log.WithError(err).Error("unable to open im channel")
 			return err
 		}
 
-		user, err := s.GetUserInfo(m.User)
+		user, err := slackClient.GetUserInfo(m.User)
 		if err != nil {
 			log.WithError(err).Error("unable to fetch user info")
 		}
 
 		msg := fmt.Sprintf(helloResponse, user.Name, "confbot")
 		params := slack.NewPostMessageParameters()
-		if _, _, err := s.PostMessage(channelID, msg, params); err != nil {
+		if _, _, err := slackClient.PostMessage(channelID, msg, params); err != nil {
 			return err
 		}
 
@@ -39,13 +39,13 @@ func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
 
 		if id == "" {
 			params := slack.NewPostMessageParameters()
-			if _, _, err := s.PostMessage(channelID, projecIsNotDefined, params); err != nil {
+			if _, _, err := slackClient.PostMessage(channelID, projecIsNotDefined, params); err != nil {
 				return errors.Wrap(err, 1)
 			}
 		} else {
 			msg = fmt.Sprintf(projectIsDefined, id)
 			params := slack.NewPostMessageParameters()
-			if _, _, err := s.PostMessage(channelID, msg, params); err != nil {
+			if _, _, err := slackClient.PostMessage(channelID, msg, params); err != nil {
 				return err
 			}
 		}
