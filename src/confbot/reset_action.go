@@ -8,7 +8,7 @@ import (
 
 // CreateResetAction returns a function that can reset a current user's settings.
 func CreateResetAction(ctx context.Context, repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client) error {
+	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client, matches [][]string) error {
 		userID := m.User
 		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": userID})
 

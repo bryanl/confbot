@@ -18,7 +18,7 @@ const (
 func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) ActionFn {
 	log := logFromContext(ctx)
 
-	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client) error {
+	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client, matches [][]string) error {
 
 		_, _, channelID, err := slackClient.OpenIMChannel(m.User)
 		if err != nil {

@@ -10,7 +10,7 @@ import (
 
 // CreateSettingsAction return a fuction that lists some settings.
 func CreateSettingsAction(repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client) error {
+	return func(ctx context.Context, m *slack.MessageEvent, s *slack.Client, matches [][]string) error {
 		userID := m.User
 		id, err := repo.ProjectID(userID)
 		if err != nil {

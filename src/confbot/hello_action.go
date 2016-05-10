@@ -12,7 +12,7 @@ import (
 
 // CreateHelloAction creates a hello action.
 func CreateHelloAction(ctx context.Context, repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client) error {
+	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client, matches [][]string) error {
 		log := logFromContext(ctx).WithFields(logrus.Fields{"user-id": m.User})
 
 		_, _, channelID, err := slackClient.OpenIMChannel(m.User)

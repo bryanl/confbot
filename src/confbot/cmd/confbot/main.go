@@ -69,6 +69,7 @@ func main() {
 	cb.AddTextAction("^./reset$", confbot.CreateResetAction(ctx, repo))
 	cb.AddTextAction("^./provision$", confbot.CreateProvisionAction(ctx, repo))
 	cb.AddTextAction("^./settings$", confbot.CreateSettingsAction(repo))
+	cb.AddTextAction(`^./configure ssh (\w+)$`, confbot.CreateConfigureSSHAction(ctx, repo))
 	go cb.Listen()
 
 	a := api.New(ctx, repo, slackClient)

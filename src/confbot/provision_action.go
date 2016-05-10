@@ -37,7 +37,7 @@ func (p *provision) Run() {
 
 // CreateProvisionAction creates a provision action.
 func CreateProvisionAction(ctx context.Context, repo Repo) ActionFn {
-	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client) error {
+	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client, matches [][]string) error {
 		userID := m.User
 		projectID, err := repo.ProjectID(userID)
 		if err != nil {

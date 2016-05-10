@@ -47,8 +47,9 @@ func (c *Confbot) Listen() {
 				log.WithField("raw-event", fmt.Sprintf("%#v", ev)).Info("incoming message")
 
 				for _, ta := range c.textActions {
-					if ta.re.Match([]byte(ev.Text)) {
-						if err := ta.fn(c.ctx, ev, c.client); err != nil {
+					matches := ta.re.FindAllStringSubmatch(ev.Text, -1)
+					if len(matches) > 0 {
+						if err := ta.fn(c.ctx, ev, c.client, matches); err != nil {
 							log.WithError(err).
 								WithField("action", ev.Text).
 								Error("could not run action")
@@ -64,75 +65,8 @@ func (c *Confbot) Listen() {
 
 }
 
-// OldListen listens for new slack messages.
-// func (c *Confbot) OldListen() {
-// 	log := logFromContext(c.ctx)
-// 	s := c.cbs
-
-// 	for {
-// 		m, raw, err := s.Receive()
-// 		if err != nil {
-// 			log.WithError(err).Error("error receiving message from slack")
-// 			continue
-// 		}
-
-// 		if m.User == s.BotID {
-// 			continue
-// 		}
-
-// 		go func(m *cbslack.Message) {
-// 			l := log.WithFields(logrus.Fields{
-// 				"type": m.Type,
-// 				"raw":  raw,
-// 			})
-
-// 			for _, ta := range c.textActions {
-// 				if ta.re.Match([]byte(m.Text)) {
-// 					err := ta.fn(c.ctx, m, s)
-// 					if err != nil {
-// 						log.WithError(err).
-// 							WithField("action", m.Text).
-// 							Error("could not run action")
-// 					}
-
-// 					return
-// 				}
-// 			}
-
-// 			switch m.Type {
-// 			case "group_joined":
-// 				ch := m.Channel()
-// 				if !any(c.validChannels, func(s string) bool {
-// 					return s == ch
-// 				}) {
-// 					s.SendToChannel("*i'm not authorized to be in this channel*", ch)
-// 					time.Sleep(5 * time.Second)
-// 					s.Leave(ch)
-// 				}
-// 			case "hello":
-// 				log.Info("successful connected to slack message server")
-// 			case "reconnect_url":
-// 				// no op. looks to be some sort of slack experiment: https://api.cbslack.com/events/reconnect_url
-// 			case "presence_change", "user_typing":
-// 				// no op. these aren't useful.
-// 			default:
-// 				if u := m.User; u != "" {
-// 					l = l.WithField("user", u)
-// 				}
-
-// 				if ch := m.Channel(); ch != "" {
-// 					l = l.WithField("channel", ch)
-// 				}
-
-// 				l.Info("unhandled message")
-// 			}
-
-// 		}(m)
-// 	}
-// }
-
 // ActionFn is an action func.
-type ActionFn func(context.Context, *slack.MessageEvent, *slack.Client) error
+type ActionFn func(context.Context, *slack.MessageEvent, *slack.Client, [][]string) error
 
 type textAction struct {
 	re *regexp.Regexp
