@@ -2,7 +2,9 @@ package api
 
 import (
 	"confbot"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
@@ -15,8 +17,9 @@ import (
 )
 
 type requestWebhook struct {
-	Type      string `json:"type"`
-	ProjectID string `json:"project_id"`
+	Type      string            `json:"type"`
+	ProjectID string            `json:"project_id"`
+	Options   map[string]string `json:"options"`
 }
 
 // API is the confbot API.
@@ -95,6 +98,40 @@ func (a *API) webhook(c *echo.Context) error {
 
 		provisioner := confbot.NewProvision(a.ctx, userID, projectID, channelID, a.repo, a.slackClient)
 		provisioner.Run()
+	case "jenkins":
+		log.WithField("raw", fmt.Sprintf("%#v", r)).Info("jenkins received")
+
+		jobName := r.Options["name"]
+		buildNum := r.Options["number"]
+		buildURL := fmt.Sprintf("http://app.%s.x.pifft.com:8080/job/%s/%s", r.ProjectID, jobName, buildNum)
+		buildURLJSON := fmt.Sprintf("%s/api/json", buildURL)
+
+		log.WithField("jenkins-info-url", buildURLJSON).Info("fetching job data")
+		res, err := http.Get(buildURLJSON)
+		if err != nil {
+			log.WithError(err).WithField("build-url", buildURLJSON).Error("unable to retrieve build data")
+			return err
+		}
+		defer res.Body.Close()
+
+		b, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+
+		var in map[string]interface{}
+		err = json.Unmarshal(b, &in)
+		if err != nil {
+			log.WithError(err).WithField("raw", string(b)).Error("unable to decode build json")
+		}
+
+		buildStatus := in["result"].(string)
+
+		params := slack.NewPostMessageParameters()
+		params.Username = "jenkins"
+		params.IconURL = "https://s3.pifft.com/oscon2016/jenkins.png"
+		msg := fmt.Sprintf("Build Number: %s - %s - %s", buildNum, buildStatus, buildURL)
+		a.slackClient.PostMessage(channelID, msg, params)
 	}
 
 	return c.NoContent(http.StatusNoContent)
