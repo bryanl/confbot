@@ -43,11 +43,11 @@ func CreateSettingsAction(repo Repo) ActionFn {
 func createSettings(id string) []slack.AttachmentField {
 	return []slack.AttachmentField{
 		{Title: "Project ID", Value: id},
-		{Title: "Site URL", Value: "http://example.com", Short: true},
-		{Title: "Consul URL", Value: fmt.Sprintf("http://app.%s.%s", id, dropletDomain), Short: true},
-		{Title: "Jenkins URL", Value: fmt.Sprintf("http://example.com"), Short: true},
-		{Title: "Kibana URL", Value: fmt.Sprintf("http://app.%s.%s:5601", id, dropletDomain), Short: true},
-		{Title: "Graphana URL", Value: fmt.Sprintf("http://example.com"), Short: true},
-		{Title: "Prometheus URL", Value: fmt.Sprintf("http://example.com"), Short: true},
+		{Title: "Site URL", Value: fmt.Sprintf("http://app.%s.%s:8888", id, dropletDomain), Short: false},
+		{Title: "Consul URL", Value: fmt.Sprintf("http://app.%s.%s", id, dropletDomain), Short: false},
+		{Title: "Jenkins URL", Value: fmt.Sprintf("http://app.%s.%s:8080", id, dropletDomain), Short: false},
+		{Title: "Kibana URL", Value: fmt.Sprintf("http://app.%s.%s:5601", id, dropletDomain), Short: false},
+		{Title: "Graphana URL", Value: fmt.Sprintf("http://app.%s.%s:3000", id, dropletDomain), Short: false},
+		{Title: "Prometheus URL", Value: fmt.Sprintf("http://app.%s.%s:9090", id, dropletDomain), Short: false},
 	}
 }
