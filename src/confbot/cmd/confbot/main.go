@@ -25,15 +25,15 @@ var (
 
 // Specification describes the enviroment required to run confbot.
 type Specification struct {
-	Env               string `default:"development"`
-	SlackToken        string `envconfig:"slack_token" required:"true"`
-	PaperTrailHost    string `envconfig:"papertrail_host"`
-	PaperTrailPort    int    `envconfig:"papertrail_port"`
-	DigitalOceanToken string `envconfig:"digitalocean_token" required:"true"`
-	RedisURL          string `envconfig:"redis_url" required:"true"`
-	HTTPAddr          string `envconfig:"http_addr" default:"localhost:8080"`
-	RemoteLogging     bool   `envconfig:"remote_logging" default:"false"`
-	BotName           string `envconfig:"bot_name" required:"true"`
+	Env                string   `default:"development"`
+	SlackToken         string   `envconfig:"slack_token" required:"true"`
+	PaperTrailHost     string   `envconfig:"papertrail_host"`
+	PaperTrailPort     int      `envconfig:"papertrail_port"`
+	RedisURL           string   `envconfig:"redis_url" required:"true"`
+	HTTPAddr           string   `envconfig:"http_addr" default:"localhost:8080"`
+	RemoteLogging      bool     `envconfig:"remote_logging" default:"false"`
+	BotName            string   `envconfig:"bot_name" required:"true"`
+	DigitalOceanTokens []string `envconfig:"digitalocean_tokens" required:"true"`
 }
 
 func main() {
@@ -54,7 +54,9 @@ func main() {
 	slackClient := slack.New(spec.SlackToken)
 	slackClient.SetDebug(true)
 
-	log.Info("application started")
+	log.WithFields(logrus.Fields{
+		"available-tokens": len(spec.DigitalOceanTokens),
+	}).Info("application started")
 
 	repo, err := confbot.NewRepo(ctx, spec.RedisURL, spec.Env)
 	if err != nil {
@@ -64,8 +66,8 @@ func main() {
 	cb := confbot.New(ctx, slackClient, repo)
 
 	cb.AddTextAction("^hello$", confbot.CreateHelloAction(ctx, repo))
-	cb.AddTextAction("^./boot shell$", confbot.CreateBootShellAction(ctx, spec.DigitalOceanToken, repo))
-	cb.AddTextAction("^./delete$", confbot.CreateDeleteAction(ctx, spec.DigitalOceanToken, repo))
+	cb.AddTextAction("^./boot shell$", confbot.CreateBootShellAction(ctx, spec.DigitalOceanTokens, repo))
+	cb.AddTextAction("^./delete$", confbot.CreateDeleteAction(ctx, repo))
 	cb.AddTextAction("^./reset$", confbot.CreateResetAction(ctx, repo))
 	cb.AddTextAction("^./provision$", confbot.CreateProvisionAction(ctx, repo))
 	cb.AddTextAction("^./settings$", confbot.CreateSettingsAction(repo))

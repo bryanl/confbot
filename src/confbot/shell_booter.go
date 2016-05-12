@@ -22,9 +22,8 @@ import (
 )
 
 var (
-	dropletRegion = "nyc1"
-	dropletSize   = "4gb"
-	dropletImage  = godo.DropletCreateImage{
+	dropletSize  = "4gb"
+	dropletImage = godo.DropletCreateImage{
 		Slug: "ubuntu-14-04-x64",
 	}
 	dropletSSHKeys = []godo.DropletCreateSSHKey{
@@ -44,17 +43,19 @@ type ShellConfig struct {
 
 // ShellBooter boots shells for demos.
 type ShellBooter struct {
-	id      string
-	doToken string
-	log     *logrus.Entry
+	id            string
+	doToken       string
+	log           *logrus.Entry
+	dropletRegion string
 }
 
 // NewShellBooter creates an instance of ShellBooter,
-func NewShellBooter(id, doToken string, log *logrus.Entry) *ShellBooter {
+func NewShellBooter(id, doToken, dropletRegion string, log *logrus.Entry) *ShellBooter {
 	return &ShellBooter{
-		id:      id,
-		doToken: doToken,
-		log:     log,
+		id:            id,
+		doToken:       doToken,
+		log:           log,
+		dropletRegion: dropletRegion,
 	}
 }
 
@@ -76,6 +77,7 @@ func (sb *ShellBooter) Boot() (*ShellConfig, error) {
 		EncodedProjectID:     base64.StdEncoding.EncodeToString([]byte(id)),
 		EncodedToken:         base64.StdEncoding.EncodeToString([]byte(sb.doToken)),
 		EncodedInstallScript: base64.StdEncoding.EncodeToString([]byte(runShellInstaller)),
+		EncodedRegion:        base64.StdEncoding.EncodeToString([]byte(sb.dropletRegion)),
 	}
 
 	t, err := generateTemplate(td)
@@ -104,11 +106,12 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 	dropletName := fmt.Sprintf("shell.%s", id)
 	sb.log.WithFields(logrus.Fields{
 		"project_id": id,
+		"region":     sb.dropletRegion,
 	}).Info("creating shell droplet")
 
 	cr := &godo.DropletCreateRequest{
 		Name:     dropletName,
-		Region:   dropletRegion,
+		Region:   sb.dropletRegion,
 		Size:     dropletSize,
 		Image:    dropletImage,
 		SSHKeys:  dropletSSHKeys,
@@ -205,6 +208,7 @@ type templateData struct {
 	EncodedProjectID     string
 	EncodedToken         string
 	EncodedInstallScript string
+	EncodedRegion        string
 }
 
 func generateTemplate(td templateData) (string, error) {
@@ -236,6 +240,11 @@ write_files:
     content: {{ .EncodedProjectID }}
     owner: root:root
     path: /etc/project-id
+    permissions: '0644'
+  - encoding: b64
+    content: {{ .EncodedRegion }}
+    owner: root:root
+    path: /etc/project-region
     permissions: '0644'
   - encoding: b64
     content: {{ .EncodedToken }}

@@ -12,7 +12,7 @@ import (
 )
 
 // CreateDeleteAction returns a function that deletes a project.
-func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn {
+func CreateDeleteAction(ctx context.Context, repo Repo) ActionFn {
 	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client, matches [][]string) error {
 		var err error
 		userID := m.User
@@ -40,6 +40,11 @@ func CreateDeleteAction(ctx context.Context, doToken string, repo Repo) ActionFn
 		}()
 
 		if _, _, err = slackClient.PostMessage(channelID, fmt.Sprintf("Deleting project _%s_ and it's associated resources", projectID), params); err != nil {
+			return err
+		}
+
+		doToken, err := repo.Token(projectID)
+		if err != nil {
 			return err
 		}
 

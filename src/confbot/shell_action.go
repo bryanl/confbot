@@ -2,6 +2,7 @@ package confbot
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/nlopes/slack"
@@ -14,11 +15,16 @@ const (
 	reactionReady = "100"
 )
 
+var (
+	dropletRegions = []string{"nyc1", "nyc2", "nyc3", "tor1", "sfo1"}
+)
+
 // CreateBootShellAction returns a function that boot a new shell.
-func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) ActionFn {
+func CreateBootShellAction(ctx context.Context, doTokens []string, repo Repo) ActionFn {
 	log := logFromContext(ctx)
 
 	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client, matches [][]string) error {
+		doToken := doTokens[rand.Intn(len(doTokens))]
 
 		_, _, channelID, err := slackClient.OpenIMChannel(m.User)
 		if err != nil {
@@ -26,10 +32,11 @@ func CreateBootShellAction(ctx context.Context, doToken string, repo Repo) Actio
 		}
 
 		id := projectID()
-		sb := NewShellBooter(id, doToken, log)
+		dropletRegion := dropletRegions[rand.Intn(len(dropletRegions))]
+		sb := NewShellBooter(id, doToken, dropletRegion, log)
 
 		userID := m.User
-		if err := repo.RegisterProject(id, userID); err != nil {
+		if err := repo.RegisterProject(id, userID, doToken); err != nil {
 			params := slack.PostMessageParameters{}
 			msg := fmt.Sprintf("unknown error: %v", err)
 			slackClient.PostMessage(channelID, msg, params)

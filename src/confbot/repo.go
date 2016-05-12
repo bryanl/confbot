@@ -29,10 +29,11 @@ func (e ProjectExistsErr) Error() string {
 // Repo is a repository for managing confbot data
 type Repo interface {
 	Ping() error
-	RegisterProject(id, userID string) error
+	RegisterProject(id, userID, pat string) error
 	ResetProject(userID string) error
 	ProjectID(userID string) (string, error)
 	User(projectID string) (string, error)
+	Token(projectID string) (string, error)
 	GetKey(projectID string) ([]byte, error)
 	SaveKey(projectID string, privateKey []byte) error
 }
@@ -131,7 +132,7 @@ func (rr *redisRepo) ResetProject(userID string) error {
 	return nil
 }
 
-func (rr *redisRepo) RegisterProject(id, userID string) error {
+func (rr *redisRepo) RegisterProject(id, userID, pat string) error {
 	conn, err := rr.pool.Get()
 	if err != nil {
 		return err
@@ -156,6 +157,12 @@ func (rr *redisRepo) RegisterProject(id, userID string) error {
 
 	k = rr.key("users")
 	_, err = conn.Cmd("HSET", k, id, userID).Int()
+	if err != nil {
+		return err
+	}
+
+	k = rr.key("tokens")
+	_, err = conn.Cmd("HSET", k, id, pat).Int()
 	if err != nil {
 		return err
 	}
@@ -238,8 +245,29 @@ func (rr *redisRepo) User(projectID string) (string, error) {
 			WithFields(logrus.Fields{
 			"key":       k,
 			"projectID": projectID}).
-			Error("fetch project id by user")
+			Error("fetch user by project id")
 		return "", fmt.Errorf("fetch user by project id: %v", err)
+	}
+
+	return id, nil
+}
+
+func (rr *redisRepo) Token(projectID string) (string, error) {
+	conn, err := rr.pool.Get()
+	if err != nil {
+		return "", err
+	}
+	defer rr.pool.Put(conn)
+
+	k := rr.key("tokens")
+	id, err := conn.Cmd("HGET", k, projectID).Str()
+	if err != nil {
+		rr.log.WithError(err).
+			WithFields(logrus.Fields{
+			"key":       k,
+			"projectID": projectID}).
+			Error("fetch token by project id")
+		return "", fmt.Errorf("fetch token by project id: %v", err)
 	}
 
 	return id, nil
