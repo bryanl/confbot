@@ -30,7 +30,7 @@ func NewProvision(ctx context.Context, userID, projectID, channel string, repo R
 }
 
 func (p *provision) Run() {
-	for state := initState; state != nil; {
+	for state := provisionInitState; state != nil; {
 		state = state(p)
 	}
 }
