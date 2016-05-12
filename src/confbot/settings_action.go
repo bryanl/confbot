@@ -25,8 +25,7 @@ func CreateSettingsAction(repo Repo) ActionFn {
 		params := slack.NewPostMessageParameters()
 
 		attachment := slack.Attachment{
-			Pretext: "some pretext",
-			Text:    "some text",
+			Pretext: "List of URLs for your environment",
 			Fields:  createSettings(id),
 		}
 
