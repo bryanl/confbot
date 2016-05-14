@@ -8,11 +8,10 @@ import (
 	"github.com/nlopes/slack"
 
 	"golang.org/x/net/context"
-	"golang.org/x/oauth2"
 )
 
 // CreateDeleteAction returns a function that deletes a project.
-func CreateDeleteAction(ctx context.Context, repo Repo) ActionFn {
+func CreateDeleteAction(ctx context.Context, masterClientToken string, repo Repo) ActionFn {
 	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client, matches [][]string) error {
 		var err error
 		userID := m.User
@@ -39,6 +38,11 @@ func CreateDeleteAction(ctx context.Context, repo Repo) ActionFn {
 			}
 		}()
 
+		if len(projectID) == 0 {
+			slackClient.PostMessage(channelID, "No project ID, so there is nothing to delete.", params)
+			return fmt.Errorf("No project ID, so there is nothing to delete.")
+		}
+
 		if _, _, err = slackClient.PostMessage(channelID, fmt.Sprintf("Deleting project _%s_ and it's associated resources", projectID), params); err != nil {
 			return err
 		}
@@ -48,16 +52,14 @@ func CreateDeleteAction(ctx context.Context, repo Repo) ActionFn {
 			return err
 		}
 
-		token := &oauth2.Token{AccessToken: doToken}
-		ts := oauth2.StaticTokenSource(token)
-		oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
-		client := godo.NewClient(oauthClient)
+		client := buildDoClient(doToken)
+		masterClient := buildDoClient(masterClientToken)
 
 		if _, _, err = slackClient.PostMessage(channelID, "*... Deleting DNS records*", params); err != nil {
 			return err
 		}
 
-		if err = deleteRecords(client, projectID, dropletDomain); err != nil {
+		if err = deleteRecords(masterClient, projectID, dropletDomain); err != nil {
 			return err
 		}
 		if _, _, err = slackClient.PostMessage(channelID, "*... Deleting SSH Keys*", params); err != nil {

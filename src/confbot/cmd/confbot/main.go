@@ -34,6 +34,7 @@ type Specification struct {
 	RemoteLogging      bool     `envconfig:"remote_logging" default:"false"`
 	BotName            string   `envconfig:"bot_name" required:"true"`
 	DigitalOceanTokens []string `envconfig:"digitalocean_tokens" required:"true"`
+	MasterToken        string   `envconfig:"master_token" required:"true"`
 }
 
 func main() {
@@ -67,8 +68,8 @@ func main() {
 
 	cb.AddTextAction("^hello$", confbot.CreateHelloAction(ctx, repo))
 	cb.AddTextAction("^./help$", confbot.CreateHelpAction(ctx, repo))
-	cb.AddTextAction("^./boot shell$", confbot.CreateBootShellAction(ctx, spec.DigitalOceanTokens, repo))
-	cb.AddTextAction("^./delete$", confbot.CreateDeleteAction(ctx, repo))
+	cb.AddTextAction("^./boot shell$", confbot.CreateBootShellAction(ctx, spec.MasterToken, spec.DigitalOceanTokens, repo))
+	cb.AddTextAction("^./delete$", confbot.CreateDeleteAction(ctx, spec.MasterToken, repo))
 	cb.AddTextAction("^./reset$", confbot.CreateResetAction(ctx, repo))
 	cb.AddTextAction("^./provision$", confbot.CreateProvisionAction(ctx, repo))
 	cb.AddTextAction("^./settings$", confbot.CreateSettingsAction(repo))

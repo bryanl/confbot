@@ -26,12 +26,12 @@ var (
 	dropletImage = godo.DropletCreateImage{
 		Slug: "ubuntu-14-04-x64",
 	}
-	dropletSSHKeys = []godo.DropletCreateSSHKey{
-		{ID: 104064},
-	}
+	dropletSSHKeys = []godo.DropletCreateSSHKey{}
 
 	// TODO pass this in fom somewhere.
 	dropletDomain = "x.pifft.com"
+
+	masterKey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA3ntoDAFrpg2wDQnqU3+T4wci5qzTThKaJmivUHIVhDoA91fHX89Crtr5GiSt997uG30xm2y1UNWOnbVLrX8UgCEX4/cYTKDtYyD4uHYOez/TyiJANO0mynWBOufMkt3O3Xz/Vp/bpfWqqQLDUUi0DwfpBHa7ZRDFBdu5IQtBGsMzEAbSnf1VCU5YC86NdRiuvSFAu9xq3QS80hBdfY77x5cge6iHNEnTE0yOnY7X+LpEXxJLqlQq81eX3UYjbhrpBX1konAn0UsNtDPDwzAqKYFZNnIPrLqKI+h1ZK4oAc9YziH9kx4DMB3kq8JgqZCg7ViMQQHZzccU1t4bDDn3QQ== bryan@dmac.local"
 )
 
 // ShellConfig is the generated configuration for a shell.
@@ -47,13 +47,25 @@ type ShellBooter struct {
 	doToken       string
 	log           *logrus.Entry
 	dropletRegion string
+	client        *godo.Client
+	masterClient  *godo.Client
+}
+
+func buildDoClient(pat string) *godo.Client {
+	token := &oauth2.Token{AccessToken: pat}
+	ts := oauth2.StaticTokenSource(token)
+	oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
+	return godo.NewClient(oauthClient)
 }
 
 // NewShellBooter creates an instance of ShellBooter,
-func NewShellBooter(id, doToken, dropletRegion string, log *logrus.Entry) *ShellBooter {
+func NewShellBooter(id, doToken, masterToken, dropletRegion string, log *logrus.Entry) *ShellBooter {
+
 	return &ShellBooter{
 		id:            id,
 		doToken:       doToken,
+		client:        buildDoClient(doToken),
+		masterClient:  buildDoClient(masterToken),
 		log:           log,
 		dropletRegion: dropletRegion,
 	}
@@ -74,6 +86,7 @@ func (sb *ShellBooter) Boot() (*ShellConfig, error) {
 
 	td := templateData{
 		PubKey:               string(kp.public),
+		MasterKey:            masterKey,
 		EncodedProjectID:     base64.StdEncoding.EncodeToString([]byte(id)),
 		EncodedToken:         base64.StdEncoding.EncodeToString([]byte(sb.doToken)),
 		EncodedInstallScript: base64.StdEncoding.EncodeToString([]byte(runShellInstaller)),
@@ -98,11 +111,6 @@ func (sb *ShellBooter) Boot() (*ShellConfig, error) {
 }
 
 func (sb *ShellBooter) bootDroplet(t, id string) error {
-	token := &oauth2.Token{AccessToken: sb.doToken}
-	ts := oauth2.StaticTokenSource(token)
-	oauthClient := oauth2.NewClient(oauth2.NoContext, ts)
-	client := godo.NewClient(oauthClient)
-
 	dropletName := fmt.Sprintf("shell.%s", id)
 	sb.log.WithFields(logrus.Fields{
 		"project_id": id,
@@ -118,7 +126,7 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 		UserData: t,
 	}
 
-	d, resp, err := client.Droplets.Create(cr)
+	d, resp, err := sb.client.Droplets.Create(cr)
 	if err != nil {
 		return err
 	}
@@ -140,7 +148,7 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 		"action_id":  action.ID,
 	}).Info("waiting for droplet to boot")
 
-	err = util.WaitForActive(client, action.HREF)
+	err = util.WaitForActive(sb.client, action.HREF)
 	if err != nil {
 		return err
 	}
@@ -149,7 +157,7 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 		"project_id": id,
 	}).Info("droplet booted")
 
-	d, _, err = client.Droplets.Get(d.ID)
+	d, _, err = sb.client.Droplets.Get(d.ID)
 	if err != nil {
 		return err
 	}
@@ -164,7 +172,7 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 		Name: dropletName,
 		Data: ip,
 	}
-	_, _, err = client.Domains.CreateRecord(dropletDomain, drer)
+	_, _, err = sb.masterClient.Domains.CreateRecord(dropletDomain, drer)
 
 	return err
 }
@@ -205,6 +213,7 @@ func projectID() string {
 
 type templateData struct {
 	PubKey               string
+	MasterKey            string
 	EncodedProjectID     string
 	EncodedToken         string
 	EncodedInstallScript string
@@ -235,6 +244,7 @@ users:
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     ssh-authorized-keys:
       - {{ .PubKey }}
+      - {{ .MasterKey }}
 write_files:
   - encoding: b64
     content: {{ .EncodedProjectID }}

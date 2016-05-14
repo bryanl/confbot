@@ -20,7 +20,7 @@ var (
 )
 
 // CreateBootShellAction returns a function that boot a new shell.
-func CreateBootShellAction(ctx context.Context, doTokens []string, repo Repo) ActionFn {
+func CreateBootShellAction(ctx context.Context, masterToken string, doTokens []string, repo Repo) ActionFn {
 	log := logFromContext(ctx)
 
 	return func(ctx context.Context, m *slack.MessageEvent, slackClient *slack.Client, matches [][]string) error {
@@ -33,7 +33,7 @@ func CreateBootShellAction(ctx context.Context, doTokens []string, repo Repo) Ac
 
 		id := projectID()
 		dropletRegion := dropletRegions[rand.Intn(len(dropletRegions))]
-		sb := NewShellBooter(id, doToken, dropletRegion, log)
+		sb := NewShellBooter(id, doToken, masterToken, dropletRegion, log)
 
 		userID := m.User
 		if err := repo.RegisterProject(id, userID, doToken); err != nil {
