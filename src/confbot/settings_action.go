@@ -48,5 +48,12 @@ func createSettings(id string) []slack.AttachmentField {
 		{Title: "Kibana URL", Value: fmt.Sprintf("http://app.%s.%s:5601", id, dropletDomain), Short: false},
 		{Title: "Graphana URL", Value: fmt.Sprintf("http://app.%s.%s:3000", id, dropletDomain), Short: false},
 		{Title: "Prometheus URL", Value: fmt.Sprintf("http://app.%s.%s:9090", id, dropletDomain), Short: false},
+
+		// {Title: "Site URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/site", id), Short: false},
+		// {Title: "Consul URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/consul", id), Short: false},
+		// {Title: "Jenkins URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/jenkins", id), Short: false},
+		// {Title: "Kibana URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/kibana", id), Short: false},
+		// {Title: "Grafana URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/grafana", id), Short: false},
+		// {Title: "Prometheus URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/prometheus", id), Short: false},
 	}
 }

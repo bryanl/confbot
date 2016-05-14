@@ -111,7 +111,7 @@ func provisionEsState(p *provision) provisionStateFn {
 	sshClient := NewSSHClient(p.ctx, p.projectID, p.repo)
 
 	params := slack.NewPostMessageParameters()
-	msg := "... Waiting for ElasticSearch to become available"
+	msg := "*... Waiting for ElasticSearch to become available*"
 	if _, _, err := p.slack.PostMessage(p.channel, msg, params); err != nil {
 		return provisionErrorStateGen(err)
 	}
@@ -140,7 +140,7 @@ func provisionEsState(p *provision) provisionStateFn {
 		return provisionErrorStateGen(err)
 	}
 
-	msg = "... Uploading ElasticSearch templates*"
+	msg = "*... Uploading ElasticSearch templates*"
 	if _, _, err := p.slack.PostMessage(p.channel, msg, params); err != nil {
 		return provisionErrorStateGen(err)
 	}
@@ -155,7 +155,7 @@ func provisionEsState(p *provision) provisionStateFn {
 		return provisionErrorStateGen(err)
 	}
 
-	msg = "... ElasticSearch templates have been uploaded*"
+	msg = "*... ElasticSearch templates have been uploaded*"
 	if _, _, err := p.slack.PostMessage(p.channel, msg, params); err != nil {
 		return provisionErrorStateGen(err)
 	}
