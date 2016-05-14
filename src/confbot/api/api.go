@@ -103,7 +103,7 @@ func (a *API) webhook(c *echo.Context) error {
 
 		jobName := r.Options["name"]
 		buildNum := r.Options["number"]
-		buildURL := fmt.Sprintf("http://app.%s.x.pifft.com:8080/job/%s/%s", r.ProjectID, jobName, buildNum)
+		buildURL := fmt.Sprintf("http://app.%s.%s:8080/job/%s/%s", r.ProjectID, confbot.DropletDomain, jobName, buildNum)
 		buildURLJSON := fmt.Sprintf("%s/api/json", buildURL)
 
 		log.WithField("jenkins-info-url", buildURLJSON).Info("fetching job data")

@@ -59,7 +59,7 @@ func CreateDeleteAction(ctx context.Context, masterClientToken string, repo Repo
 			return err
 		}
 
-		if err = deleteRecords(masterClient, projectID, dropletDomain); err != nil {
+		if err = deleteRecords(masterClient, projectID, DropletDomain); err != nil {
 			return err
 		}
 		if _, _, err = slackClient.PostMessage(channelID, "*... Deleting SSH Keys*", params); err != nil {
@@ -103,7 +103,7 @@ func deleteRecords(client *godo.Client, projectID, domain string) error {
 
 	for _, rec := range recs {
 		if strings.HasSuffix(rec.Name, projectID) {
-			_, err := client.Domains.DeleteRecord(dropletDomain, rec.ID)
+			_, err := client.Domains.DeleteRecord(DropletDomain, rec.ID)
 			if err != nil {
 				return err
 			}
@@ -117,7 +117,7 @@ func listRecords(client *godo.Client) ([]godo.DomainRecord, error) {
 	list := []godo.DomainRecord{}
 	opt := &godo.ListOptions{}
 	for {
-		recs, resp, err := client.Domains.Records(dropletDomain, opt)
+		recs, resp, err := client.Domains.Records(DropletDomain, opt)
 		if err != nil {
 			return nil, err
 		}

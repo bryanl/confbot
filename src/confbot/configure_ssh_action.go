@@ -50,7 +50,7 @@ func CreateConfigureSSHAction(ctx context.Context, repo Repo) ActionFn {
 				"Host Name. Next, navigate to the SSH / Auth Category, and "+
 				"browse for your oscon2016.ppk in the `Private key file for authentication` "+
 				"text box. Afterwards, click open, and enter `workshop` as your user name.",
-				projectID, dropletDomain)
+				projectID, DropletDomain)
 
 			params := slack.NewPostMessageParameters()
 			slackClient.PostMessage(channelID, msg, params)
@@ -64,7 +64,7 @@ func CreateConfigureSSHAction(ctx context.Context, repo Repo) ActionFn {
 				"id_rsa will be download to $HOME/Downloads. In your terminal, "+
 				"run `chmod 600 id_rsa`. You can SSH to your shell Droplet by running "+
 				"`ssh -i id_rsa workshop@shell.%s.%s`.",
-				projectID, dropletDomain)
+				projectID, DropletDomain)
 
 			params := slack.NewPostMessageParameters()
 			slackClient.PostMessage(channelID, msg, params)
@@ -78,7 +78,7 @@ func CreateConfigureSSHAction(ctx context.Context, repo Repo) ActionFn {
 				"navigate to your download folder and run `chmod 600 id_rsa`. "+
 				"You can SSH to your shell Droplet by running "+
 				"`ssh -i id_rsa workshop@shell.%s.%s`. ",
-				projectID, dropletDomain)
+				projectID, DropletDomain)
 
 			params := slack.NewPostMessageParameters()
 			slackClient.PostMessage(channelID, msg, params)
@@ -104,7 +104,7 @@ func uploadPrivateKey(log *logrus.Entry, slackClient *slack.Client, channelID st
 	if _, err := slackClient.UploadFile(uploadParams); err != nil {
 		log.WithError(err).
 			WithFields(logrus.Fields{
-			"filename": "id_rsa"}).
+				"filename": "id_rsa"}).
 			Error("key upload failed")
 
 		return err
@@ -147,7 +147,7 @@ func uploadPPK(log *logrus.Entry, slackClient *slack.Client, channelID string, p
 	if _, err := slackClient.UploadFile(uploadParams); err != nil {
 		log.WithError(err).
 			WithFields(logrus.Fields{
-			"filename": "oscon2016.ppk"}).
+				"filename": "oscon2016.ppk"}).
 			Error("ppk upload failed")
 
 		return err

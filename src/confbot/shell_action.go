@@ -16,7 +16,8 @@ const (
 )
 
 var (
-	dropletRegions = []string{"nyc1", "nyc2", "nyc3", "tor1", "sfo1"}
+	// DropletRegions are the droplet regions we will boot droplets in.
+	DropletRegions = []string{"nyc1", "nyc2", "nyc3", "tor1", "sfo1", "fra1", "lon1", "ams2", "ams3"}
 )
 
 // CreateBootShellAction returns a function that boot a new shell.
@@ -32,14 +33,15 @@ func CreateBootShellAction(ctx context.Context, masterToken string, doTokens []s
 		}
 
 		id := projectID()
-		dropletRegion := dropletRegions[rand.Intn(len(dropletRegions))]
+		dropletRegion := DropletRegions[rand.Intn(len(DropletRegions))]
 		sb := NewShellBooter(id, doToken, masterToken, dropletRegion, log)
 
 		userID := m.User
 		if err := repo.RegisterProject(id, userID, doToken); err != nil {
 			params := slack.PostMessageParameters{}
-			msg := fmt.Sprintf("unknown error: %v", err)
+			msg := fmt.Sprintf("Can't boot shell: %v", err)
 			slackClient.PostMessage(channelID, msg, params)
+			return err
 
 		}
 
@@ -70,7 +72,7 @@ func CreateBootShellAction(ctx context.Context, masterToken string, doTokens []s
 			return err
 		}
 
-		txt := fmt.Sprintf(shellResp1, id, dropletDomain)
+		txt := fmt.Sprintf(shellResp1, id, DropletDomain)
 		params := slack.PostMessageParameters{}
 		slackClient.PostMessage(channelID, txt, params)
 

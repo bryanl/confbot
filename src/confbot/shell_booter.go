@@ -28,8 +28,9 @@ var (
 	}
 	dropletSSHKeys = []godo.DropletCreateSSHKey{}
 
+	// DropletDomain is the domain for droplets.
 	// TODO pass this in fom somewhere.
-	dropletDomain = "x.pifft.com"
+	DropletDomain = "x.pifft.com"
 
 	masterKey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA3ntoDAFrpg2wDQnqU3+T4wci5qzTThKaJmivUHIVhDoA91fHX89Crtr5GiSt997uG30xm2y1UNWOnbVLrX8UgCEX4/cYTKDtYyD4uHYOez/TyiJANO0mynWBOufMkt3O3Xz/Vp/bpfWqqQLDUUi0DwfpBHa7ZRDFBdu5IQtBGsMzEAbSnf1VCU5YC86NdRiuvSFAu9xq3QS80hBdfY77x5cge6iHNEnTE0yOnY7X+LpEXxJLqlQq81eX3UYjbhrpBX1konAn0UsNtDPDwzAqKYFZNnIPrLqKI+h1ZK4oAc9YziH9kx4DMB3kq8JgqZCg7ViMQQHZzccU1t4bDDn3QQ== bryan@dmac.local"
 )
@@ -106,7 +107,7 @@ func (sb *ShellBooter) Boot() (*ShellConfig, error) {
 	return &ShellConfig{
 		KeyPair:   kp,
 		ProjectID: id,
-		Hostname:  fmt.Sprintf("shell-%s.%s", id, dropletDomain),
+		Hostname:  fmt.Sprintf("shell-%s.%s", id, DropletDomain),
 	}, nil
 }
 
@@ -172,7 +173,7 @@ func (sb *ShellBooter) bootDroplet(t, id string) error {
 		Name: dropletName,
 		Data: ip,
 	}
-	_, _, err = sb.masterClient.Domains.CreateRecord(dropletDomain, drer)
+	_, _, err = sb.masterClient.Domains.CreateRecord(DropletDomain, drer)
 
 	return err
 }

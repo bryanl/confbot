@@ -32,7 +32,7 @@ func NewSSHClient(ctx context.Context, projectID string, repo Repo) *SSHClient {
 
 // Execute executes a command on a remote ssh host.
 func (s *SSHClient) Execute(host, cmd string) (string, error) {
-	hostname := fmt.Sprintf("%s.%s.%s:%d", host, s.projectID, dropletDomain, defaultSSHPort)
+	hostname := fmt.Sprintf("%s.%s.%s:%d", host, s.projectID, DropletDomain, defaultSSHPort)
 
 	pemBytes, err := s.repo.GetKey(s.projectID)
 	if err != nil {

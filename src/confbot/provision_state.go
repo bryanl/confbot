@@ -122,7 +122,7 @@ func provisionEsState(p *provision) provisionStateFn {
 			return provisionErrorStateGen(errors.New("timed out while waiting for elasticsearch to answer"))
 		}
 
-		host := fmt.Sprintf("app.%s.%s:9200", p.projectID, dropletDomain)
+		host := fmt.Sprintf("app.%s.%s:9200", p.projectID, DropletDomain)
 		log.WithField("count", c).Info("check to see if elasticsearch is up")
 		conn, err := net.DialTimeout("tcp", host, time.Minute*1)
 		if err == nil {
@@ -155,7 +155,7 @@ func provisionEsState(p *provision) provisionStateFn {
 		return provisionErrorStateGen(err)
 	}
 
-	msg = "*... ElasticSearch templates have been uploaded*"
+	msg = "* ... ElasticSearch templates have been uploaded*"
 	if _, _, err := p.slack.PostMessage(p.channel, msg, params); err != nil {
 		return provisionErrorStateGen(err)
 	}
@@ -197,8 +197,8 @@ func provisionUploadOutput(p *provision, log *logrus.Entry, name, out string) er
 	if f, err := p.slack.UploadFile(uploadParams); err != nil {
 		log.WithError(err).
 			WithFields(logrus.Fields{
-			"filename": name,
-			"content":  fmt.Sprintf("%#v\n", f)}).
+				"filename": name,
+				"content":  fmt.Sprintf("%#v\n", f)}).
 			Error("upload failed")
 		return err
 	}
