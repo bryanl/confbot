@@ -47,10 +47,15 @@ func New(ctx context.Context, repo confbot.Repo, s *slack.Client) *API {
 	e.Use(mw.Recover())
 
 	e.Post("/webhook", a.webhook)
+	e.Get("/status", a.status)
 
 	a.Mux = e
 
 	return a
+}
+
+func (a *API) status(c *echo.Context) error {
+	return c.String(http.StatusOK, "OK")
 }
 
 func (a *API) webhook(c *echo.Context) error {
