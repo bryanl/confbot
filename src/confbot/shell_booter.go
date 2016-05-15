@@ -29,8 +29,10 @@ var (
 	dropletSSHKeys = []godo.DropletCreateSSHKey{}
 
 	// DropletDomain is the domain for droplets.
-	// TODO pass this in fom somewhere.
 	DropletDomain = "x.pifft.com"
+
+	// WebhookURL is the URL for the bot.
+	WebhookURL = "https://devconfbot.ngrok.io/webhook"
 
 	masterKey = "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA3ntoDAFrpg2wDQnqU3+T4wci5qzTThKaJmivUHIVhDoA91fHX89Crtr5GiSt997uG30xm2y1UNWOnbVLrX8UgCEX4/cYTKDtYyD4uHYOez/TyiJANO0mynWBOufMkt3O3Xz/Vp/bpfWqqQLDUUi0DwfpBHa7ZRDFBdu5IQtBGsMzEAbSnf1VCU5YC86NdRiuvSFAu9xq3QS80hBdfY77x5cge6iHNEnTE0yOnY7X+LpEXxJLqlQq81eX3UYjbhrpBX1konAn0UsNtDPDwzAqKYFZNnIPrLqKI+h1ZK4oAc9YziH9kx4DMB3kq8JgqZCg7ViMQQHZzccU1t4bDDn3QQ== bryan@dmac.local"
 )
@@ -92,6 +94,7 @@ func (sb *ShellBooter) Boot() (*ShellConfig, error) {
 		EncodedToken:         base64.StdEncoding.EncodeToString([]byte(sb.doToken)),
 		EncodedInstallScript: base64.StdEncoding.EncodeToString([]byte(runShellInstaller)),
 		EncodedRegion:        base64.StdEncoding.EncodeToString([]byte(sb.dropletRegion)),
+		EncodedWebhookURL:    base64.StdEncoding.EncodeToString([]byte(WebhookURL)),
 	}
 
 	t, err := generateTemplate(td)
@@ -219,6 +222,7 @@ type templateData struct {
 	EncodedToken         string
 	EncodedInstallScript string
 	EncodedRegion        string
+	EncodedWebhookURL    string
 }
 
 func generateTemplate(td templateData) (string, error) {
@@ -261,6 +265,11 @@ write_files:
     content: {{ .EncodedToken }}
     owner: root:root
     path: /etc/digitalocean-token
+    permissions: '0644'
+  - encoding: b64
+    content: {{ .EncodedWebhookURL }}
+    owner: root:root
+    path: /etc/confbot-webhook-url
     permissions: '0644'
   - encoding: b64
     content: {{ .EncodedInstallScript }}

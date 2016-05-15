@@ -37,6 +37,7 @@ type Specification struct {
 	DigitalOceanTokens []string `envconfig:"digitalocean_tokens" required:"true"`
 	MasterToken        string   `envconfig:"master_token" required:"true"`
 	DropletDomain      string   `envconfig:"droplet_domain" required:"true"`
+	WebhookURL         string   `envconfig:"webhook_url" required:"true"`
 }
 
 func main() {
@@ -56,6 +57,9 @@ func main() {
 
 	log.WithField("droplet-domain", spec.DropletDomain).Info("setting droplet domain")
 	confbot.DropletDomain = spec.DropletDomain
+
+	log.WithField("webhook-url", spec.WebhookURL).Info("setting bot webhook URL")
+	confbot.WebhookURL = spec.WebhookURL
 
 	slackClient := slack.New(spec.SlackToken)
 	slackClient.SetDebug(true)
