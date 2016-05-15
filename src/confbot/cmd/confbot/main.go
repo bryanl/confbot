@@ -2,6 +2,7 @@ package main
 
 import (
 	"confbot"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -30,6 +31,7 @@ type Specification struct {
 	PaperTrailHost     string   `envconfig:"papertrail_host"`
 	PaperTrailPort     int      `envconfig:"papertrail_port"`
 	HTTPAddr           string   `envconfig:"http_addr" default:"localhost:8080"`
+	Port               string   `envconfig:"port"`
 	RemoteLogging      bool     `envconfig:"remote_logging" default:"false"`
 	BotName            string   `envconfig:"bot_name" required:"true"`
 	DigitalOceanTokens []string `envconfig:"digitalocean_tokens" required:"true"`
@@ -86,6 +88,10 @@ func main() {
 
 	a := api.New(ctx, repo, slackClient)
 	http.Handle("/", a.Mux)
+
+	if spec.Port != "" {
+		spec.HTTPAddr = fmt.Sprintf(":%s", spec.Port)
+	}
 
 	log.WithField("addr", spec.HTTPAddr).Info("created http server")
 	log.Fatal(http.ListenAndServe(spec.HTTPAddr, nil))
