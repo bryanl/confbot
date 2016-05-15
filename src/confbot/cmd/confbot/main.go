@@ -29,12 +29,13 @@ type Specification struct {
 	SlackToken         string   `envconfig:"slack_token" required:"true"`
 	PaperTrailHost     string   `envconfig:"papertrail_host"`
 	PaperTrailPort     int      `envconfig:"papertrail_port"`
-	RedisURL           string   `envconfig:"redis_url" required:"true"`
+	RedisURL           string   `envconfig:"REDIS_URL" required:"true"`
 	HTTPAddr           string   `envconfig:"http_addr" default:"localhost:8080"`
 	RemoteLogging      bool     `envconfig:"remote_logging" default:"false"`
 	BotName            string   `envconfig:"bot_name" required:"true"`
 	DigitalOceanTokens []string `envconfig:"digitalocean_tokens" required:"true"`
 	MasterToken        string   `envconfig:"master_token" required:"true"`
+	DropletDomain      string   `envconfig:"droplet_domain" required:"true"`
 }
 
 func main() {
@@ -51,6 +52,9 @@ func main() {
 	setupLogger(spec, log)
 
 	ctx := context.WithValue(context.Background(), "log", log)
+
+	log.WithField("droplet-domain", spec.DropletDomain).Info("setting droplet domain")
+	confbot.DropletDomain = spec.DropletDomain
 
 	slackClient := slack.New(spec.SlackToken)
 	slackClient.SetDebug(true)
