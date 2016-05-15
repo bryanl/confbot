@@ -95,6 +95,7 @@ func (sb *ShellBooter) Boot() (*ShellConfig, error) {
 		EncodedInstallScript: base64.StdEncoding.EncodeToString([]byte(runShellInstaller)),
 		EncodedRegion:        base64.StdEncoding.EncodeToString([]byte(sb.dropletRegion)),
 		EncodedWebhookURL:    base64.StdEncoding.EncodeToString([]byte(WebhookURL)),
+		EncodedDomain:        base64.StdEncoding.EncodeToString([]byte(DropletDomain)),
 	}
 
 	t, err := generateTemplate(td)
@@ -223,6 +224,7 @@ type templateData struct {
 	EncodedInstallScript string
 	EncodedRegion        string
 	EncodedWebhookURL    string
+	EncodedDomain        string
 }
 
 func generateTemplate(td templateData) (string, error) {
@@ -270,6 +272,11 @@ write_files:
     content: {{ .EncodedWebhookURL }}
     owner: root:root
     path: /etc/confbot-webhook-url
+    permissions: '0644'
+  - encoding: b64
+    content: {{ .EncodedDomain }}
+    owner: root:root
+    path: /etc/project-domain
     permissions: '0644'
   - encoding: b64
     content: {{ .EncodedInstallScript }}
