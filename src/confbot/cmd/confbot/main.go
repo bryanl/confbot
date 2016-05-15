@@ -29,7 +29,6 @@ type Specification struct {
 	SlackToken         string   `envconfig:"slack_token" required:"true"`
 	PaperTrailHost     string   `envconfig:"papertrail_host"`
 	PaperTrailPort     int      `envconfig:"papertrail_port"`
-	RedisURL           string   `envconfig:"REDIS_URL" required:"true"`
 	HTTPAddr           string   `envconfig:"http_addr" default:"localhost:8080"`
 	RemoteLogging      bool     `envconfig:"remote_logging" default:"false"`
 	BotName            string   `envconfig:"bot_name" required:"true"`
@@ -63,7 +62,12 @@ func main() {
 		"available-tokens": len(spec.DigitalOceanTokens),
 	}).Info("application started")
 
-	repo, err := confbot.NewRepo(ctx, spec.RedisURL, spec.Env)
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		log.Fatal("must supply REDIS_URL env var")
+	}
+
+	repo, err := confbot.NewRepo(ctx, redisURL, spec.Env)
 	if err != nil {
 		rootLog.WithError(err).Fatalf("unable to create repo")
 	}
