@@ -46,16 +46,18 @@ func (c *Confbot) Listen() {
 			case *slack.MessageEvent:
 				log.WithField("raw-event", fmt.Sprintf("%#v", ev)).Info("incoming message")
 
-				for _, ta := range c.textActions {
-					matches := ta.re.FindAllStringSubmatch(ev.Text, -1)
-					if len(matches) > 0 {
-						if err := ta.fn(c.ctx, ev, c.client, matches); err != nil {
-							log.WithError(err).
-								WithField("action", ev.Text).
-								Error("could not run action")
+				go func() {
+					for _, ta := range c.textActions {
+						matches := ta.re.FindAllStringSubmatch(ev.Text, -1)
+						if len(matches) > 0 {
+							if err := ta.fn(c.ctx, ev, c.client, matches); err != nil {
+								log.WithError(err).
+									WithField("action", ev.Text).
+									Error("could not run action")
+							}
 						}
 					}
-				}
+				}()
 
 			case *slack.RTMError:
 				fmt.Printf("Error: %s\n", ev.Error())
