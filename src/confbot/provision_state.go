@@ -169,7 +169,10 @@ func provisionErrorStateGen(err error) provisionStateFn {
 		p.log.WithField("provision-state", "errorState").WithError(err).Error("provision failed")
 		msg := "*Provisioning process Failed* All was not well with the provisioning process. " +
 			"This is expected as the cloud is a chaotic environment. To restart the provision process " +
-			"issue the `./provision` command."
+			"issue the `./provision` command. You can also log into your shell and run ansible by hand. " +
+			"Issue the `./configure ssh <type>` command substituting <type> with *linux*, *mac, or *windows*. " +
+			"After SSH is setup, ssh to `workshop@shell." + p.projectID + "." + DropletDomain + "."
+
 		_, _, _ = p.slack.PostMessage(p.channel, msg, params)
 		return nil
 	}
