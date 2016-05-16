@@ -46,14 +46,7 @@ func createSettings(id string) []slack.AttachmentField {
 		{Title: "Consul URL", Value: fmt.Sprintf("http://app.%s.%s", id, DropletDomain), Short: false},
 		{Title: "Jenkins URL", Value: fmt.Sprintf("http://app.%s.%s:8080", id, DropletDomain), Short: false},
 		{Title: "Kibana URL", Value: fmt.Sprintf("http://app.%s.%s:5601", id, DropletDomain), Short: false},
-		{Title: "Graphana URL", Value: fmt.Sprintf("http://app.%s.%s:3000", id, DropletDomain), Short: false},
+		{Title: "Grafana URL", Value: fmt.Sprintf("http://app.%s.%s:3000", id, DropletDomain), Short: false},
 		{Title: "Prometheus URL", Value: fmt.Sprintf("http://app.%s.%s:9090", id, DropletDomain), Short: false},
-
-		// {Title: "Site URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/site", id), Short: false},
-		// {Title: "Consul URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/consul", id), Short: false},
-		// {Title: "Jenkins URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/jenkins", id), Short: false},
-		// {Title: "Kibana URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/kibana", id), Short: false},
-		// {Title: "Grafana URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/grafana", id), Short: false},
-		// {Title: "Prometheus URL", Value: fmt.Sprintf("https://oscon2016.x.pifft.com/%s/prometheus", id), Short: false},
 	}
 }
